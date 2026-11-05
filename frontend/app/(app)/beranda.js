@@ -3,7 +3,18 @@ import { useAuth } from '../../context/AuthContext';
 import { router } from 'expo-router';
 
 export default function BerandaScreen() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
+
+  // Fungsi untuk mengambil inisial otomatis dari nama user
+  const getInitials = (name) => {
+    if (!name) return 'FZ';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const displayName = user?.nama || user?.name || user?.email || 'Pengguna Frozzy';
+  const userInitials = getInitials(displayName);
 
   return (
     <View style={styles.container}>
@@ -22,7 +33,7 @@ export default function BerandaScreen() {
             <View style={styles.redDot} />
           </TouchableOpacity>
           <View style={styles.avatarCircle}>
-            <Text style={styles.avatarInitials}>BS</Text>
+            <Text style={styles.avatarInitials}>{userInitials}</Text>
           </View>
         </View>
       </View>
@@ -33,7 +44,7 @@ export default function BerandaScreen() {
         <View style={styles.greetingCard}>
           <View>
             <Text style={styles.greetingSub}>Selamat bertugas,</Text>
-            <Text style={styles.greetingName}>Halo, {user?.nama || 'Budi Santoso'}</Text>
+            <Text style={styles.greetingName}>Halo, {displayName}</Text>
           </View>
           <View style={styles.offlinePill}>
             <View style={styles.blueDot} />
@@ -139,14 +150,14 @@ export default function BerandaScreen() {
 
       </ScrollView>
 
-      {/* Navigasi Menu Bawah persis Figma */}
+      {/* Navigasi Menu Bawah */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.replace('/(app)/beranda')}>
           <Text style={styles.navIconActive}>🏠</Text>
           <Text style={styles.navTextActive}>Beranda</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem} onPress={() => alert('Produk')}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.replace('/(app)/produk')}>
           <Text style={styles.navIcon}>📦</Text>
           <Text style={styles.navText}>Produk</Text>
         </TouchableOpacity>
@@ -161,7 +172,7 @@ export default function BerandaScreen() {
           <Text style={styles.navText}>Transaksi</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem} onPress={signOut}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.replace('/(app)/profil')}>
           <Text style={styles.navIcon}>👤</Text>
           <Text style={styles.navText}>Profil</Text>
         </TouchableOpacity>
