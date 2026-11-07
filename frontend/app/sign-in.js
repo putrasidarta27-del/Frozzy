@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import {
   View,
@@ -99,6 +100,23 @@ export default function SignInScreen() {
               style={styles.eyeButton}
             >
               <Text style={styles.eyeText}>{showPassword ? 'Sembunyikan' : 'Lihat'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ alignItems: 'center', marginTop: 18 }}>
+            <Text style={{ fontSize: 12, color: '#64748B' }}>
+              Belum punya akun?
+            </Text>
+
+            <TouchableOpacity onPress={() => router.push('/sign-up')}>
+              <Text style={{
+                fontSize: 13,
+                color: '#0052CC',
+                fontWeight: '700',
+                marginTop: 4,
+              }}>
+                Daftar Sekarang
+              </Text>
             </TouchableOpacity>
           </View>
 
