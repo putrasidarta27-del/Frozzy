@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { router } from 'expo-router';
+import BottomNav from '../../components/BottomNav';
 
 export default function BerandaScreen() {
   const { user } = useAuth();
@@ -151,32 +152,7 @@ export default function BerandaScreen() {
       </ScrollView>
 
       {/* Navigasi Menu Bawah */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.replace('/(app)/beranda')}>
-          <Text style={styles.navIconActive}>🏠</Text>
-          <Text style={styles.navTextActive}>Beranda</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem} onPress={() => router.replace('/(app)/produk')}>
-          <Text style={styles.navIcon}>📦</Text>
-          <Text style={styles.navText}>Produk</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem} onPress={() => alert('Penjualan')}>
-          <Text style={styles.navIcon}>🛒</Text>
-          <Text style={styles.navText}>Penjualan</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem} onPress={() => alert('Transaksi')}>
-          <Text style={styles.navIcon}>📋</Text>
-          <Text style={styles.navText}>Transaksi</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem} onPress={() => router.replace('/(app)/profil')}>
-          <Text style={styles.navIcon}>👤</Text>
-          <Text style={styles.navText}>Profil</Text>
-        </TouchableOpacity>
-      </View>
+      <BottomNav active="beranda" />
     </View>
   );
 }
@@ -260,7 +236,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 90,
+    paddingBottom: 120,
   },
   greetingCard: {
     backgroundColor: '#FFFFFF',

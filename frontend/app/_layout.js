@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { ProductProvider } from '../context/ProductContext'; // 1. Import ProductProvider
 
 function Navigator() {
   const { token, loading } = useAuth();
@@ -20,7 +21,10 @@ function Navigator() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <Navigator />
+      {/* 2. Bungkus aplikasi dengan ProductProvider */}
+      <ProductProvider>
+        <Navigator />
+      </ProductProvider>
     </AuthProvider>
   );
 }
