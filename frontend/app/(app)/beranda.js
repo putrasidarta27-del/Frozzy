@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useAuth } from '../../context/AuthContext';
 import { router } from 'expo-router';
 import BottomNav from '../../components/BottomNav';
+import { daftarTransaksi, formatRupiah, hitungTotal, hitungItem } from '../../data/transaksiData';
 
 export default function BerandaScreen() {
   const { user } = useAuth();
@@ -116,38 +117,30 @@ export default function BerandaScreen() {
         {/* Judul Seksi: Transaksi Terakhir */}
         <View style={styles.trxHeaderRow}>
           <Text style={styles.sectionHeading}>Transaksi Terakhir</Text>
-          <TouchableOpacity onPress={() => alert('Lihat semua transaksi')}>
-            <Text style={styles.newTrxBadge}>2 Baru</Text>
-          </TouchableOpacity>
+         <TouchableOpacity onPress={() => router.replace('/(app)/transaksi')}>
+  <Text style={styles.newTrxBadge}>Lihat Semua</Text>
+</TouchableOpacity>
         </View>
 
-        {/* Kartu Transaksi 1 */}
-        <View style={styles.trxCard}>
-          <View style={styles.trxRowTop}>
-            <Text style={styles.trxCodeText}>TRX-20250924-001</Text>
-            <View style={styles.greenStatusBadge}>
-              <Text style={styles.greenStatusText}>Berhasil</Text>
-            </View>
-          </View>
-          <View style={styles.trxRowBottom}>
-            <Text style={styles.trxInfoText}>24 Sep 2025, 14:32  •  4 item</Text>
-            <Text style={styles.trxPriceText}>Rp160.000</Text>
-          </View>
-        </View>
-
-        {/* Kartu Transaksi 2 */}
-        <View style={styles.trxCard}>
-          <View style={styles.trxRowTop}>
-            <Text style={styles.trxCodeText}>TRX-20250924-002</Text>
-            <View style={styles.greenStatusBadge}>
-              <Text style={styles.greenStatusText}>Berhasil</Text>
-            </View>
-          </View>
-          <View style={styles.trxRowBottom}>
-            <Text style={styles.trxInfoText}>24 Sep 2025, 12:15  •  2 item</Text>
-            <Text style={styles.trxPriceText}>Rp85.000</Text>
-          </View>
-        </View>
+       {daftarTransaksi.slice(0, 2).map((trx) => (
+  <TouchableOpacity
+    key={trx.id}
+    style={styles.trxCard}
+    activeOpacity={0.8}
+    onPress={() => router.push({ pathname: '/(app)/detail-transaksi', params: { id: trx.id } })}
+  >
+    <View style={styles.trxRowTop}>
+      <Text style={styles.trxCodeText}>{trx.id}</Text>
+      <View style={styles.greenStatusBadge}>
+        <Text style={styles.greenStatusText}>Berhasil</Text>
+      </View>
+    </View>
+    <View style={styles.trxRowBottom}>
+      <Text style={styles.trxInfoText}>{trx.tanggalPendek}, {trx.jam}  •  {hitungItem(trx)} item</Text>
+      <Text style={styles.trxPriceText}>{formatRupiah(hitungTotal(trx))}</Text>
+    </View>
+  </TouchableOpacity>
+))}
 
       </ScrollView>
 

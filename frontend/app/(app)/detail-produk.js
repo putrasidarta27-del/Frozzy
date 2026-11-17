@@ -4,7 +4,7 @@ import { useProducts } from '../../context/ProductContext';
 
 export default function DetailProdukScreen() {
   const params = useLocalSearchParams();
-  const { produkList } = useProducts();
+  const { produkList, deleteProduct } = useProducts(); // [DIUBAH] tambah deleteProduct
 
   // Cari produk asli di ProductContext berdasarkan SKU yang diklik
   const found = produkList.find((p) => p.sku === params.sku);
@@ -25,6 +25,25 @@ export default function DetailProdukScreen() {
     temp: found?.temp || params.temp || '-18°C Suhu Beku',
     deskripsi: found?.deskripsi || params.deskripsi || 'Nugget ayam renyah kemasan 500 gram kualitas premium. Simpan beku di suhu -18°C.',
     image: imageSource,
+  };
+
+  // [DIUBAH] Hapus produk sungguhan lalu buka layar sukses
+  const handleHapus = () => {
+    Alert.alert(
+      'Hapus Produk',
+      `Apakah kamu yakin ingin menghapus "${product.nama}" dari sistem?`,
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Hapus',
+          style: 'destructive',
+          onPress: () => {
+            if (found?.id) deleteProduct(found.id);
+            router.replace('/(app)/hapus-produk-sukses');
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -99,7 +118,7 @@ export default function DetailProdukScreen() {
       <View style={styles.footerActionContainer}>
         <TouchableOpacity 
           style={styles.editButton} 
-          onPress={() => alert('Navigasi ke Edit Produk')}
+          onPress={() => router.push({ pathname: '/(app)/edit-produk', params: { id: found?.id } })}
           activeOpacity={0.8}
         >
           <Text style={styles.editButtonIcon}>✏️</Text>
@@ -108,16 +127,7 @@ export default function DetailProdukScreen() {
 
         <TouchableOpacity 
           style={styles.deleteButton} 
-          onPress={() => {
-            Alert.alert(
-              'Hapus Produk',
-              'Apakah kamu yakin ingin menghapus produk ini dari sistem?',
-              [
-                { text: 'Batal', style: 'cancel' },
-                { text: 'Hapus', style: 'destructive', onPress: () => router.back() }
-              ]
-            );
-          }}
+          onPress={handleHapus}
           activeOpacity={0.7}
         >
           <Text style={styles.deleteButtonIcon}>🗑️</Text>

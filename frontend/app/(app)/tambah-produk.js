@@ -99,9 +99,11 @@ export default function TambahProdukScreen() {
 
     addProduct(produkBaru);
 
-    Alert.alert('Sukses', 'Produk baru berhasil disimpan ke dalam sistem inventaris!', [
-      { text: 'OK', onPress: () => router.back() }
-    ]);
+     // Buka layar sukses (replace agar tombol back tidak kembali ke form)
+    router.replace({
+      pathname: '/(app)/tambah-produk-sukses',
+      params: { id: produkBaru.id },
+    });
   };
 
   return (
