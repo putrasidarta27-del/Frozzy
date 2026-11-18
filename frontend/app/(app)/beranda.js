@@ -2,10 +2,21 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useAuth } from '../../context/AuthContext';
 import { router } from 'expo-router';
 import BottomNav from '../../components/BottomNav';
-import { daftarTransaksi, formatRupiah, hitungTotal, hitungItem } from '../../data/transaksiData';
+// [DIUBAH] Data contoh tidak dipakai lagi, diganti data dari server
+// import { daftarTransaksi, formatRupiah, hitungTotal, hitungItem } from '../../data/transaksiData';
+import { useTransaksi } from '../../context/TransaksiContext'; // [DITAMBAHKAN]
+import { useProducts } from '../../context/ProductContext'; // [DITAMBAHKAN]
+
+const formatRupiah = (angka) => `Rp${Number(angka).toLocaleString('id-ID')}`; // [DITAMBAHKAN]
 
 export default function BerandaScreen() {
   const { user } = useAuth();
+
+  // [DITAMBAHKAN] Data asli dari server
+  const { transaksiList } = useTransaksi();
+  const { produkList } = useProducts();
+  const totalSku = produkList.length;
+  const totalStok = produkList.reduce((s, p) => s + (parseInt(p.stok, 10) || 0), 0);
 
   // Fungsi untuk mengambil inisial otomatis dari nama user
   const getInitials = (name) => {
@@ -42,7 +53,7 @@ export default function BerandaScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
-        {/* Kartu Sapaan & Status Offline */}
+        {/* Kartu Sapaan & Status Server */}
         <View style={styles.greetingCard}>
           <View>
             <Text style={styles.greetingSub}>Selamat bertugas,</Text>
@@ -50,7 +61,8 @@ export default function BerandaScreen() {
           </View>
           <View style={styles.offlinePill}>
             <View style={styles.blueDot} />
-            <Text style={styles.offlinePillText}>Mode Offline Siap</Text>
+            {/* [DIUBAH] Sebelumnya "Mode Offline Siap"; data sekarang tersimpan di server */}
+            <Text style={styles.offlinePillText}>Terhubung Server</Text>
           </View>
         </View>
 
@@ -61,7 +73,8 @@ export default function BerandaScreen() {
               <Text style={styles.statLabel}>Total Produk</Text>
               <Text style={styles.statIconBadge}>📦</Text>
             </View>
-            <Text style={styles.statNumber}>148</Text>
+            {/* [DIUBAH] Sebelumnya angka tetap 148 */}
+            <Text style={styles.statNumber}>{totalSku}</Text>
             <Text style={styles.statFooter}>SKU Tersedia</Text>
           </View>
 
@@ -70,7 +83,8 @@ export default function BerandaScreen() {
               <Text style={styles.statLabel}>Total Stok</Text>
               <Text style={styles.statIconBadge}>🗄️</Text>
             </View>
-            <Text style={styles.statNumber}>2.850</Text>
+            {/* [DIUBAH] Sebelumnya angka tetap 2.850 */}
+            <Text style={styles.statNumber}>{totalStok.toLocaleString('id-ID')}</Text>
             <Text style={styles.statFooter}>Unit dalam freezer</Text>
           </View>
         </View>
@@ -81,7 +95,7 @@ export default function BerandaScreen() {
         {/* Tombol Biru Utama: Mulai Penjualan */}
         <TouchableOpacity 
           style={styles.mainActionButton}
-          onPress={() => alert('Mulai Penjualan')}
+          onPress={() => router.replace('/(app)/penjualan')} // [DIUBAH]
           activeOpacity={0.9}
         >
           <View style={styles.mainActionLeft}>
@@ -117,30 +131,39 @@ export default function BerandaScreen() {
         {/* Judul Seksi: Transaksi Terakhir */}
         <View style={styles.trxHeaderRow}>
           <Text style={styles.sectionHeading}>Transaksi Terakhir</Text>
-         <TouchableOpacity onPress={() => router.replace('/(app)/transaksi')}>
-  <Text style={styles.newTrxBadge}>Lihat Semua</Text>
-</TouchableOpacity>
+          <TouchableOpacity onPress={() => router.replace('/(app)/transaksi')}>
+            <Text style={styles.newTrxBadge}>Lihat Semua</Text>
+          </TouchableOpacity>
         </View>
 
-       {daftarTransaksi.slice(0, 2).map((trx) => (
-  <TouchableOpacity
-    key={trx.id}
-    style={styles.trxCard}
-    activeOpacity={0.8}
-    onPress={() => router.push({ pathname: '/(app)/detail-transaksi', params: { id: trx.id } })}
-  >
-    <View style={styles.trxRowTop}>
-      <Text style={styles.trxCodeText}>{trx.id}</Text>
-      <View style={styles.greenStatusBadge}>
-        <Text style={styles.greenStatusText}>Berhasil</Text>
-      </View>
-    </View>
-    <View style={styles.trxRowBottom}>
-      <Text style={styles.trxInfoText}>{trx.tanggalPendek}, {trx.jam}  •  {hitungItem(trx)} item</Text>
-      <Text style={styles.trxPriceText}>{formatRupiah(hitungTotal(trx))}</Text>
-    </View>
-  </TouchableOpacity>
-))}
+        {/* [DITAMBAHKAN] Tampilan bila belum ada transaksi */}
+        {transaksiList.length === 0 && (
+          <View style={styles.trxCard}>
+            <Text style={styles.trxInfoText}>Belum ada transaksi.</Text>
+          </View>
+        )}
+
+        {/* [DIUBAH] Sebelumnya daftarTransaksi (data contoh), sekarang transaksiList (database) */}
+        {transaksiList.slice(0, 2).map((trx) => (
+          <TouchableOpacity
+            key={trx.id}
+            style={styles.trxCard}
+            activeOpacity={0.8}
+            onPress={() => router.push({ pathname: '/(app)/detail-transaksi', params: { id: trx.id } })}
+          >
+            <View style={styles.trxRowTop}>
+              <Text style={styles.trxCodeText}>{trx.id}</Text>
+              <View style={styles.greenStatusBadge}>
+                <Text style={styles.greenStatusText}>Berhasil</Text>
+              </View>
+            </View>
+            <View style={styles.trxRowBottom}>
+              {/* [DIUBAH] jumlah item dan total langsung dari server */}
+              <Text style={styles.trxInfoText}>{trx.tanggalPendek}, {trx.jam}  •  {trx.jumlahItem} item</Text>
+              <Text style={styles.trxPriceText}>{formatRupiah(trx.total)}</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
 
       </ScrollView>
 

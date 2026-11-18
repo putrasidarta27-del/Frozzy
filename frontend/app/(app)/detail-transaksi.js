@@ -1,10 +1,16 @@
+import { useState, useEffect } from 'react'; // [DITAMBAHKAN]
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useProducts } from '../../context/ProductContext';
-import { daftarTransaksi, formatRupiah, hitungTotal, hitungItem } from '../../data/transaksiData';
+// [DIUBAH] Data contoh tidak dipakai lagi, diganti data dari server
+// import { daftarTransaksi, formatRupiah, hitungTotal, hitungItem } from '../../data/transaksiData';
+import { useTransaksi, METODE_PEMBAYARAN } from '../../context/TransaksiContext'; // [DITAMBAHKAN]
+import { BASE_URL } from '../../services/produkService'; // [DITAMBAHKAN]
+
+const formatRupiah = (angka) => `Rp${Number(angka).toLocaleString('id-ID')}`; // [DITAMBAHKAN]
 
 export default function DetailTransaksiScreen() {
   const params = useLocalSearchParams();
@@ -12,12 +18,31 @@ export default function DetailTransaksiScreen() {
   const { produkList } = useProducts();
   const insets = useSafeAreaInsets();
 
-  const trx = daftarTransaksi.find((t) => t.id === params.id);
+  // [DIUBAH] Nota diambil dari server (daftar riwayat tidak membawa rincian item)
+  // const trx = daftarTransaksi.find((t) => t.id === params.id);
+  const { transaksiList, ambilDetail } = useTransaksi();
+  const [detail, setDetail] = useState(null);
+  const [gagal, setGagal] = useState(false);
+  const header = transaksiList.find((t) => t.id === params.id);
+
+  useEffect(() => {
+    let aktif = true;
+    if (!header) return undefined;
+    ambilDetail(header.idTransaksi)
+      .then((d) => { if (aktif) setDetail(d); })
+      .catch(() => { if (aktif) setGagal(true); });
+    return () => { aktif = false; };
+  }, [header?.idTransaksi]);
+
+  const trx = detail || (header && header.items.length > 0 ? header : null);
 
   if (!trx) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: '#64748B' }}>Transaksi tidak ditemukan.</Text>
+        {/* [DIUBAH] pesan menyesuaikan keadaan */}
+        <Text style={{ color: '#64748B' }}>
+          {!header ? 'Transaksi tidak ditemukan.' : gagal ? 'Gagal memuat nota.' : 'Memuat nota...'}
+        </Text>
         <TouchableOpacity onPress={() => router.replace('/(app)/transaksi')} style={{ marginTop: 12 }}>
           <Text style={{ color: '#0052CC', fontWeight: '700' }}>Kembali</Text>
         </TouchableOpacity>
@@ -25,9 +50,11 @@ export default function DetailTransaksiScreen() {
     );
   }
 
-  const kasir = user?.nama || user?.name || 'Budi Santoso';
-  const total = hitungTotal(trx);
-  const totalItem = hitungItem(trx);
+  // [DIUBAH] Semua dari data transaksi asli (sebelumnya nama cadangan 'Budi Santoso')
+  const kasir = trx.kasir || user?.nama || user?.name || '-';
+  const total = trx.total;
+  const totalItem = trx.items.reduce((s, i) => s + i.qty, 0);
+  const ikonMetode = METODE_PEMBAYARAN.find((m) => m.key === trx.metode)?.icon || 'cash'; // [DITAMBAHKAN]
 
   // Pola batang barcode dibuat dari nomor transaksi (hanya tampilan)
   const bars = trx.id.split('').map((c, i) => ({
@@ -80,7 +107,8 @@ export default function DetailTransaksiScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>Kasir Bertugas</Text>
               <Text style={styles.value}>{kasir}</Text>
-              <Text style={styles.labelSmall}>ID: KSR-089</Text>
+              {/* [DIUBAH] Sebelumnya tulisan tetap "ID: KSR-089" */}
+              <Text style={styles.labelSmall}>Kanal: {trx.kanal}</Text>
             </View>
           </View>
 
@@ -111,8 +139,11 @@ export default function DetailTransaksiScreen() {
 
           {trx.items.map((item, index) => {
             const produk = produkList.find((p) => p.sku === item.sku);
+            // [DIUBAH] Bila produk tidak ada di katalog, pakai foto dari server (kalau ada)
             const img = produk?.image
               ? (typeof produk.image === 'string' ? { uri: produk.image } : produk.image)
+              : item.imageUrl
+              ? { uri: `${BASE_URL}${item.imageUrl}` }
               : null;
             return (
               <View key={item.sku + index} style={[styles.itemRow, index > 0 && styles.itemRowBorder]}>
@@ -133,7 +164,7 @@ export default function DetailTransaksiScreen() {
                   </Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.itemTotal}>{formatRupiah(item.qty * item.harga)}</Text>
+                  <Text style={styles.itemTotal}>{formatRupiah(item.subtotal ?? item.qty * item.harga)}</Text>
                   <Text style={styles.itemSync}>Tersimpan</Text>
                 </View>
               </View>
@@ -154,8 +185,9 @@ export default function DetailTransaksiScreen() {
           <View style={styles.sumRow}>
             <Text style={styles.sumLabel}>Metode Pembayaran</Text>
             <View style={styles.payRow}>
-              <MaterialCommunityIcons name="qrcode-scan" size={15} color="#0052CC" />
-              <Text style={styles.sumValue}>QRIS Statis</Text>
+              {/* [DIUBAH] Sebelumnya tulisan tetap "QRIS Statis"; sekarang metode asli transaksi */}
+              <MaterialCommunityIcons name={ikonMetode} size={15} color="#0052CC" />
+              <Text style={styles.sumValue}>{trx.metode}</Text>
             </View>
           </View>
           <View style={styles.divider} />

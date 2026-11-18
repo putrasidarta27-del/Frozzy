@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert 
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BottomNav from '../../components/BottomNav';
-import { daftarTransaksi, formatRupiah, hitungTotal, hitungItem } from '../../data/transaksiData';
+// [DIUBAH] Data contoh tidak dipakai lagi, diganti data dari server
+// import { daftarTransaksi, formatRupiah, hitungTotal, hitungItem } from '../../data/transaksiData';
+import { useTransaksi } from '../../context/TransaksiContext'; // [DIUBAH] data dari server
 
 const filterTabs = [
   { key: 'semua', label: 'Semua' },
@@ -11,14 +13,32 @@ const filterTabs = [
   { key: 'minggu-ini', label: 'Minggu Ini' },
 ];
 
+// [DITAMBAHKAN] Tanggal WIB (UTC+7) berbentuk 'YYYY-MM-DD'; selisihHari = mundur berapa hari
+const kunciWib = (selisihHari = 0) => {
+  const d = new Date(Date.now() + 7 * 60 * 60 * 1000 - selisihHari * 24 * 60 * 60 * 1000);
+  const dua = (n) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${dua(d.getUTCMonth() + 1)}-${dua(d.getUTCDate())}`;
+};
+const formatRupiah = (angka) => `Rp${Number(angka).toLocaleString('id-ID')}`; // [DITAMBAHKAN]
+
 export default function TransaksiScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('semua');
 
-  // Semua transaksi contoh bertanggal 24 Sep 2025, jadi chip periode tidak mengubah isi daftar.
-  const filteredTransaksi = daftarTransaksi.filter((trx) =>
-    trx.id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // [DIUBAH] Data dari server; chip periode sekarang benar-benar menyaring
+  const { transaksiList } = useTransaksi();
+  const hariIni = kunciWib(0);
+  const batasMinggu = kunciWib(6);
+  const filteredTransaksi = transaksiList.filter((trx) => {
+    const cocokKode = trx.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const cocokPeriode =
+      activeFilter === 'hari-ini'
+        ? trx.kunciTanggal === hariIni
+        : activeFilter === 'minggu-ini'
+        ? trx.kunciTanggal >= batasMinggu
+        : true;
+    return cocokKode && cocokPeriode;
+  });
 
   return (
     <View style={styles.container}>
@@ -32,8 +52,9 @@ export default function TransaksiScreen() {
         </View>
 
         <View style={styles.syncPill}>
-          <MaterialCommunityIcons name="cellphone-check" size={14} color="#0052CC" />
-          <Text style={styles.syncText}>Lokal</Text>
+          {/* [DIUBAH] ikon dan teks sesuai kenyataan: data dari database */}
+          <MaterialCommunityIcons name="database-check" size={14} color="#0052CC" />
+          <Text style={styles.syncText}>Database</Text>
         </View>
       </View>
 
@@ -83,7 +104,10 @@ export default function TransaksiScreen() {
 
         {/* Judul Seksi */}
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>HARI INI (24 SEP 2025)</Text>
+          {/* [DIUBAH] Sebelumnya tulisan tetap "HARI INI (24 SEP 2025)" */}
+          <Text style={styles.sectionTitle}>
+            {activeFilter === 'hari-ini' ? 'HARI INI' : activeFilter === 'minggu-ini' ? '7 HARI TERAKHIR' : 'SEMUA TRANSAKSI'}
+          </Text>
           <Text style={styles.sectionCount}>{filteredTransaksi.length} Transaksi</Text>
         </View>
 
@@ -113,12 +137,14 @@ export default function TransaksiScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.trxLabel}>Item Pembelian</Text>
                   <Text style={styles.trxItems} numberOfLines={1}>
-                    {hitungItem(trx)} item
+                    {/* [DIUBAH] Sebelumnya hitungItem(trx); sekarang langsung dari server */}
+                    {trx.jumlahItem} item
                   </Text>
                 </View>
                 <View style={styles.totalBox}>
                   <Text style={styles.trxLabel}>Total Tagihan</Text>
-                  <Text style={styles.trxTotal}>{formatRupiah(hitungTotal(trx))}</Text>
+                  {/* [DIUBAH] Sebelumnya hitungTotal(trx); sekarang langsung dari server */}
+                  <Text style={styles.trxTotal}>{formatRupiah(trx.total)}</Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -146,7 +172,8 @@ export default function TransaksiScreen() {
         {filteredTransaksi.length > 0 && (
           <View style={styles.notePill}>
             <MaterialCommunityIcons name="lock-outline" size={13} color="#475569" />
-            <Text style={styles.noteText}>Semua transaksi tersimpan di perangkat</Text>
+            {/* [DIUBAH] Sebelumnya "tersimpan di perangkat" */}
+            <Text style={styles.noteText}>Semua transaksi tersimpan di database</Text>
           </View>
         )}
       </ScrollView>

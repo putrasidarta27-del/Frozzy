@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ProductProvider } from '../context/ProductContext'; // 1. Import ProductProvider
+import { TransaksiProvider } from '../context/TransaksiContext'; // [DITAMBAHKAN]
 
 function Navigator() {
   const { token, loading } = useAuth();
@@ -18,12 +19,15 @@ function Navigator() {
   );
 }
 
+// 2. Aplikasi dibungkus AuthProvider > ProductProvider > TransaksiProvider
+// [DITAMBAHKAN] TransaksiProvider harus di dalam ProductProvider (memakai data produk dan login)
 export default function RootLayout() {
   return (
     <AuthProvider>
-      {/* 2. Bungkus aplikasi dengan ProductProvider */}
       <ProductProvider>
-        <Navigator />
+        <TransaksiProvider>
+          <Navigator />
+        </TransaksiProvider>
       </ProductProvider>
     </AuthProvider>
   );

@@ -10,7 +10,7 @@ const INACTIVE_COLOR = '#334155';
 const NAV_ITEMS = [
   { key: 'beranda', label: 'Beranda', icon: 'home-outline', iconActive: 'home', route: '/(app)/beranda' },
   { key: 'produk', label: 'Produk', icon: 'archive-outline', iconActive: 'archive', route: '/(app)/produk' },
-  { key: 'penjualan', label: 'Penjualan', icon: 'cash-register', iconActive: 'cash-register', route: null },
+  { key: 'penjualan', label: 'Penjualan', icon: 'cash-register', iconActive: 'cash-register', route: '/(app)/penjualan' },
   { key: 'transaksi', label: 'Transaksi', icon: 'receipt-text-outline', iconActive: 'receipt-text', route: '/(app)/transaksi' },
   { key: 'profil', label: 'Profil', icon: 'account-outline', iconActive: 'account', route: '/(app)/profil' },
 ];
