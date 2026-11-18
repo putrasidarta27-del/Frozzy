@@ -231,8 +231,7 @@ export default function ProdukScreen() {
 
             <TouchableOpacity
               style={styles.barcodeButton}
-              onPress={() => alert('Buka pemindai barcode gudang')}
-              activeOpacity={0.7}
+              onPress={() => router.push('/(app)/scan-barcode')}
             >
               <MaterialCommunityIcons name="barcode-scan" size={18} color="#334155" />
               <Text style={styles.barcodeButtonText}>Atau gunakan pemindai barcode gudang</Text>

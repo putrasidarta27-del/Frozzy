@@ -1,38 +1,64 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { router } from 'expo-router';
 import BottomNav from '../../components/BottomNav';
 
 export default function ProfilScreen() {
   const { user, signOut } = useAuth();
+  const [modalKeluarVisible, setModalKeluarVisible] = useState(false);
 
-  // Fungsi untuk mengambil huruf depan nama (contoh: "Budi Santoso" jadi "BS")
+  // [DIUBAH] Ambil inisial dari nama asli pengguna, cadangan 'FZ' (bukan 'BS' Budi Santoso)
   const getInitials = (name) => {
-    if (!name) return 'BS';
+    if (!name) return 'FZ';
     const parts = name.trim().split(' ');
     if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     return name.substring(0, 2).toUpperCase();
   };
 
-  const displayName = user?.nama || user?.name || user?.email || 'Budi Santoso';
-  const displayRole = user?.role || user?.peran || 'Admin Kasir & Stok';
-  const displayId = user?.id_karyawan || user?.id || 'KSR-FRZ-089';
+  // [DIUBAH] Gunakan data nyata dari server; hindari nama/data karangan
+  const displayName = user?.nama || user?.email || 'Pengguna Frozzy';
+  const displayEmail = user?.email || '-';
+  const displayRole = user?.role || 'Pegawai';
+  const displayId = user?.id ? `USR-${String(user.id).padStart(3, '0')}` : '-';
   const initials = getInitials(displayName);
+
+  // Format tanggal bergabung jika tersedia dari GET /auth/me
+  const formatTanggal = (tgl) => {
+    if (!tgl) return 'Terdaftar di sistem';
+    const date = new Date(tgl);
+    if (isNaN(date.getTime())) return 'Terdaftar di sistem';
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
+  const handleKonfirmasiKeluar = async () => {
+    setModalKeluarVisible(false);
+    await signOut();
+  };
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.logoArea}>
-          <Text style={styles.snowflakeIcon}>❄</Text>
+          <View style={styles.logoIconBox}>
+            <MaterialCommunityIcons name="snowflake" size={20} color="#0052CC" />
+          </View>
           <Text style={styles.headerTitle}>Profil Saya</Text>
         </View>
-        <TouchableOpacity style={styles.notifButton} onPress={() => alert('Notifikasi')}>
-          <Text style={styles.notifIcon}>🔔</Text>
-        </TouchableOpacity>
+        <View style={styles.serverBadge}>
+          <View style={styles.greenDot} />
+          <Text style={styles.serverBadgeText}>Online</Text>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+        {/* Kartu Utama Profil */}
         <View style={styles.profileCard}>
           <View style={styles.profileTopRow}>
             <View style={styles.avatarWrapper}>
@@ -45,39 +71,34 @@ export default function ProfilScreen() {
             <View style={styles.profileMainInfo}>
               <View style={styles.nameRow}>
                 <Text style={styles.profileName}>{displayName}</Text>
-                <Text style={styles.verifiedBadge}>☑</Text>
+                <MaterialCommunityIcons name="check-decagram" size={18} color="#0052CC" />
               </View>
-              
+
               <View style={styles.rolePill}>
-                <Text style={styles.rolePillIcon}>💼</Text>
+                <MaterialCommunityIcons
+                  name={displayRole === 'Pemilik' ? 'shield-account' : 'account-tie'}
+                  size={13}
+                  color="#0052CC"
+                />
                 <Text style={styles.rolePillText}>{displayRole}</Text>
               </View>
 
-              <Text style={styles.branchText}>🏢 Frozzy Frozen Mart - Cabang Utama</Text>
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.profileBottomRow}>
-            <View style={styles.tempStatus}>
-              <Text style={styles.tempIcon}>🌡️</Text>
-              <Text style={styles.tempLabel}>Cold-Room #02: </Text>
-              <Text style={styles.tempValue}>-18.4°C</Text>
-            </View>
-            <View style={styles.shiftBadge}>
-              <Text style={styles.shiftText}>Shift Pagi</Text>
+              <View style={styles.branchRow}>
+                <MaterialCommunityIcons name="storefront-outline" size={14} color="#64748B" />
+                <Text style={styles.branchText}>Frozzy Cold Storage UMKM</Text>
+              </View>
             </View>
           </View>
         </View>
 
+        {/* Kartu Informasi Akun (Data Nyata dari Tabel users) */}
         <View style={styles.infoCard}>
           <View style={styles.infoCardHeader}>
             <View style={styles.infoTitleRow}>
-              <Text style={styles.infoTitleIcon}>👤</Text>
+              <MaterialCommunityIcons name="account-card-details-outline" size={18} color="#0052CC" />
               <Text style={styles.infoTitle}>Informasi Akun</Text>
             </View>
-            <Text style={styles.infoSubText}>ID Karyawan Resmi</Text>
+            <Text style={styles.infoSubText}>Data Server</Text>
           </View>
 
           <View style={styles.infoRow}>
@@ -86,53 +107,93 @@ export default function ProfilScreen() {
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>ID Karyawan</Text>
+            <Text style={styles.infoLabel}>Email Akun</Text>
+            <Text style={styles.infoValueBold}>{displayEmail}</Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>ID Pengguna</Text>
             <View style={styles.idBadge}>
-              <Text style={styles.idBadgeText}>{displayId} 📄</Text>
+              <Text style={styles.idBadgeText}>{displayId}</Text>
             </View>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Peran</Text>
+            <Text style={styles.infoLabel}>Peran Akses</Text>
             <Text style={styles.infoValueBold}>{displayRole}</Text>
           </View>
 
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Status Akun</Text>
             <View style={styles.activeStatusBadge}>
-              <Text style={styles.activeStatusText}>● Aktif (Terverifikasi)</Text>
+              <Text style={styles.activeStatusText}>Aktif</Text>
             </View>
           </View>
 
           <View style={styles.infoRowLast}>
-            <Text style={styles.infoLabel}>Versi Aplikasi</Text>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.infoValueBold}>Frozzy v2.4.1–rc</Text>
-              <Text style={styles.offlineText}>☁ Offline Ready</Text>
+            <Text style={styles.infoLabel}>Terdaftar Sejak</Text>
+            <Text style={styles.infoValueMuted}>{formatTanggal(user?.dibuat_pada)}</Text>
+          </View>
+        </View>
+
+        {/* Tombol Edit Profil & Ubah Kata Sandi (Figma Hal. 25) */}
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => router.push('/(app)/edit-profil')}
+          activeOpacity={0.85}
+        >
+          <MaterialCommunityIcons name="account-edit-outline" size={18} color="#FFFFFF" />
+          <Text style={styles.editButtonText}>Edit Profil & Kata Sandi</Text>
+        </TouchableOpacity>
+
+        {/* Tombol Keluar (Memicu Modal Figma Hal. 26) */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={() => setModalKeluarVisible(true)}
+          activeOpacity={0.85}
+        >
+          <MaterialCommunityIcons name="logout" size={18} color="#DC2626" />
+          <Text style={styles.logoutButtonText}>Keluar dari Aplikasi</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* [DITAMBAHKAN] Modal Konfirmasi Keluar dari Aplikasi (Figma Halaman 26) */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modalKeluarVisible}
+        onRequestClose={() => setModalKeluarVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <View style={styles.modalIconCircle}>
+              <MaterialCommunityIcons name="logout-variant" size={28} color="#DC2626" />
+            </View>
+            <Text style={styles.modalTitle}>Keluar dari Aplikasi?</Text>
+            <Text style={styles.modalDesc}>
+              Anda harus masuk kembali menggunakan email dan kata sandi untuk mengakses data inventaris dan kasir.
+            </Text>
+
+            <View style={styles.modalButtonRow}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setModalKeluarVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalCancelText}>Batal</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
+                onPress={handleKonfirmasiKeluar}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalConfirmText}>Keluar</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
-
-        <View style={styles.printerCard}>
-          <View style={styles.printerIconBox}>
-            <Text style={styles.printerIcon}>🖨️</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.printerTitle}>Thermal POS Printer</Text>
-            <Text style={styles.printerStatus}>Bluetooth Terhubung (RP-58A)</Text>
-          </View>
-          <Text style={styles.arrowIcon}>›</Text>
-        </View>
-
-        <TouchableOpacity style={styles.editButton} activeOpacity={0.85}>
-          <Text style={styles.editButtonText}>✏️ Edit Profil</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.logoutButton} onPress={signOut} activeOpacity={0.85}>
-          <Text style={styles.logoutButtonText}>↪ Keluar / Logout</Text>
-        </TouchableOpacity>
-
-      </ScrollView>
+      </Modal>
 
       {/* Navigasi Menu Bawah */}
       <BottomNav active="profil" />
@@ -154,32 +215,47 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#E2E8F0',
   },
   logoArea: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
-  snowflakeIcon: {
-    fontSize: 20,
-    color: '#0052CC',
+  logoIconBox: {
+    width: 34,
+    height: 34,
+    backgroundColor: '#EBF2FF',
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0052CC',
+    color: '#0F172A',
   },
-  notifButton: {
-    width: 36,
-    height: 36,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 18,
-    justifyContent: 'center',
+  serverBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    gap: 6,
   },
-  notifIcon: {
-    fontSize: 16,
+  greenDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#16A34A',
+  },
+  serverBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#15803D',
   },
   scrollContent: {
     padding: 16,
@@ -195,32 +271,33 @@ const styles = StyleSheet.create({
   },
   profileTopRow: {
     flexDirection: 'row',
-    gap: 12,
+    alignItems: 'center',
+    gap: 14,
   },
   avatarWrapper: {
     position: 'relative',
   },
   avatarCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#C6D8FF',
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#EBF2FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: '#0052CC',
   },
   onlineStatusDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 13,
+    height: 13,
+    borderRadius: 6.5,
     backgroundColor: '#16A34A',
     position: 'absolute',
-    bottom: 2,
-    right: 2,
+    bottom: 1,
+    right: 1,
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
@@ -237,75 +314,36 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F172A',
   },
-  verifiedBadge: {
-    fontSize: 14,
-    color: '#0052CC',
-  },
   rolePill: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#EBF2FF',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: 8,
     alignSelf: 'flex-start',
     marginVertical: 6,
-    gap: 4,
-  },
-  rolePillIcon: {
-    fontSize: 10,
+    gap: 5,
   },
   rolePillText: {
     fontSize: 11,
     color: '#0052CC',
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  branchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   branchText: {
-    fontSize: 11,
-    color: '#64748B',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginVertical: 12,
-  },
-  profileBottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  tempStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  tempIcon: {
     fontSize: 12,
-  },
-  tempLabel: {
-    fontSize: 11,
     color: '#64748B',
-  },
-  tempValue: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  shiftBadge: {
-    backgroundColor: '#E0E7FF',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  shiftText: {
-    fontSize: 10,
-    color: '#3730A3',
-    fontWeight: '700',
   },
   infoCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 18,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -316,16 +354,12 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   infoTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-  },
-  infoTitleIcon: {
-    fontSize: 14,
-    color: '#0052CC',
+    gap: 8,
   },
   infoTitle: {
     fontSize: 14,
@@ -334,7 +368,7 @@ const styles = StyleSheet.create({
   },
   infoSubText: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
   },
   infoRow: {
     flexDirection: 'row',
@@ -356,20 +390,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F172A',
   },
+  infoValueMuted: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
   idBadge: {
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: 8,
+    backgroundColor: '#EBF2FF',
+    paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 6,
   },
   idBadgeText: {
     fontSize: 11,
-    color: '#1D4ED8',
+    color: '#0052CC',
     fontWeight: '700',
   },
   activeStatusBadge: {
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: 8,
+    paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 6,
   },
@@ -378,54 +417,14 @@ const styles = StyleSheet.create({
     color: '#15803D',
     fontWeight: '700',
   },
-  offlineText: {
-    fontSize: 10,
-    color: '#16A34A',
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  printerCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 12,
-  },
-  printerIconBox: {
-    width: 38,
-    height: 38,
-    backgroundColor: '#EFF6FF',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  printerIcon: {
-    fontSize: 18,
-  },
-  printerTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  printerStatus: {
-    fontSize: 11,
-    color: '#16A34A',
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  arrowIcon: {
-    fontSize: 18,
-    color: '#94A3B8',
-  },
   editButton: {
+    flexDirection: 'row',
     backgroundColor: '#0052CC',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     marginBottom: 10,
   },
   editButtonText: {
@@ -434,50 +433,85 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   logoutButton: {
+    flexDirection: 'row',
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FCA5A5',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   logoutButtonText: {
     color: '#DC2626',
     fontSize: 14,
     fontWeight: '700',
   },
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    elevation: 8,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    justifyContent: 'center',
+    padding: 24,
   },
-  navItem: {
+  modalBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 22,
     alignItems: 'center',
   },
-  navIcon: {
-    fontSize: 16,
-    opacity: 0.5,
+  modalIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
   },
-  navIconActive: {
-    fontSize: 16,
-  },
-  navText: {
-    fontSize: 10,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  navTextActive: {
-    fontSize: 10,
-    color: '#0052CC',
+  modalTitle: {
+    fontSize: 17,
     fontWeight: '700',
-    marginTop: 2,
+    color: '#0F172A',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalDesc: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 20,
+  },
+  modalButtonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  modalCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#DC2626',
+  },
+  modalConfirmText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

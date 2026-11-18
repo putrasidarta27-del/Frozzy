@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import {
   View,
@@ -17,14 +16,15 @@ import { apiFetch } from '../services/api';
 
 export default function SignUpScreen() {
   const [nama, setNama] = useState('');
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [konfirmasi, setKonfirmasi] = useState('');
+  const [role, setRole] = useState('Pegawai'); // [DITAMBAHKAN] Default role Pegawai
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   async function handleRegister() {
-    if (!nama.trim() || !username.trim() || !password || !konfirmasi) {
+    if (!nama.trim() || !email.trim() || !password || !konfirmasi) {
       Alert.alert('Peringatan', 'Semua kolom wajib diisi.');
       return;
     }
@@ -42,12 +42,14 @@ export default function SignUpScreen() {
     try {
       setLoading(true);
 
+      // [DITAMBAHKAN] Mengirim data role ('Pemilik' atau 'Pegawai') ke backend
       await apiFetch('/auth/register', {
         method: 'POST',
         body: JSON.stringify({
           nama: nama.trim(),
-          username: username.trim(),
+          email: email.trim().toLowerCase(),
           password,
+          role,
         }),
       });
 
@@ -107,16 +109,57 @@ export default function SignUpScreen() {
             />
           </View>
 
-          <Text style={styles.label}>Username</Text>
+          <Text style={styles.label}>Email Akun</Text>
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Buat username"
+              placeholder="contoh: tiodev@frozzy.com"
               placeholderTextColor="#A0AEC0"
               autoCapitalize="none"
-              value={username}
-              onChangeText={setUsername}
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
             />
+          </View>
+
+          {/* [DITAMBAHKAN] Pilihan Role Akun (Pemilik / Pegawai) */}
+          <Text style={styles.label}>Pilih Peran (Role)</Text>
+          <View style={styles.roleContainer}>
+            <TouchableOpacity
+              style={[
+                styles.roleButton,
+                role === 'Pemilik' && styles.roleButtonActive,
+              ]}
+              onPress={() => setRole('Pemilik')}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.roleText,
+                  role === 'Pemilik' && styles.roleTextActive,
+                ]}
+              >
+                Pemilik
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.roleButton,
+                role === 'Pegawai' && styles.roleButtonActive,
+              ]}
+              onPress={() => setRole('Pegawai')}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.roleText,
+                  role === 'Pegawai' && styles.roleTextActive,
+                ]}
+              >
+                Pegawai
+              </Text>
+            </TouchableOpacity>
           </View>
 
           <Text style={styles.label}>Kata Sandi</Text>
@@ -270,6 +313,33 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 13,
     color: '#1E293B',
+  },
+  // [DITAMBAHKAN] Style untuk tombol pilihan role
+  roleContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 4,
+  },
+  roleButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+  },
+  roleButtonActive: {
+    backgroundColor: '#0052CC',
+    borderColor: '#0052CC',
+  },
+  roleText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  roleTextActive: {
+    color: '#FFFFFF',
   },
   eyeText: {
     fontSize: 11,

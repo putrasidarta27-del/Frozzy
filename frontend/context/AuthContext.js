@@ -73,4 +73,21 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   return useContext(AuthContext);
+
+
+// [DITAMBAHKAN] Fungsi untuk memperbarui data profil state lokal & server
+  async function updateProfile(namaBaru, emailBaru) {
+    const saved = await SecureStore.getItemAsync(TOKEN_KEY);
+    const data = await apiFetch('/auth/profil', {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${saved}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ nama: namaBaru, email: emailBaru }),
+    });
+    setUser(data.user);
+    return data;
+  }
+
 }

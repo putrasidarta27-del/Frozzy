@@ -113,7 +113,7 @@ export default function BerandaScreen() {
         {/* Tombol Putih: Scan Barcode Produk */}
         <TouchableOpacity 
           style={styles.subActionButton}
-          onPress={() => alert('Scan Barcode')}
+          onPress={() => router.push('/(app)/scan-barcode')}
           activeOpacity={0.8}
         >
           <View style={styles.mainActionLeft}>
