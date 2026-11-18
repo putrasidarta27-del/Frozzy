@@ -14,6 +14,14 @@ export default function PenjualanSuksesScreen() {
   // Transaksi yang baru dibuat ada di urutan teratas daftar
   const trx = transaksiList.find((t) => t.id === params.id) || transaksiList[0];
 
+  // [DITAMBAHKAN] Data stok sebelum -> sesudah, dikirim dari layar pembayaran (Figma hal. 20)
+  let stokBerubah = [];
+  try {
+    stokBerubah = JSON.parse(params.stok || '[]');
+  } catch (e) {
+    stokBerubah = [];
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -25,7 +33,7 @@ export default function PenjualanSuksesScreen() {
           </View>
         </View>
 
-        <Text style={styles.title}>Pembayaran Berhasil</Text>
+        <Text style={styles.title}>Transaksi Berhasil Disimpan</Text>
         <Text style={styles.subtitle}>Transaksi tersimpan di database dan stok produk sudah dikurangi.</Text>
 
         {trx && (
@@ -62,20 +70,56 @@ export default function PenjualanSuksesScreen() {
               <Text style={styles.value}>{trx.jumlahItem} pcs</Text>
             </View>
             <View style={[styles.rowBetween, { marginTop: 8 }]}>
-              <Text style={styles.grandLabel}>Total Pembayaran</Text>
+              <Text style={styles.grandLabel}>Total Transaksi</Text>
               <Text style={styles.grandValue}>{rupiah(trx.total)}</Text>
             </View>
+          </View>
+        )}
+
+        {/* [DITAMBAHKAN] Rincian pengurangan stok */}
+        {stokBerubah.length > 0 && (
+          <View style={styles.stokCard}>
+            <View style={styles.stokHeader}>
+              <MaterialCommunityIcons name="archive-check-outline" size={20} color="#15803D" />
+              <Text style={styles.stokTitle}>Stok Berhasil Dikurangi Otomatis</Text>
+            </View>
+            {stokBerubah.map((s, i) => (
+              <View key={s.nama + i} style={styles.stokRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.stokNama}>{s.nama}</Text>
+                  <Text style={styles.stokAngka}>
+                    {s.sebelum} {'→'} <Text style={styles.stokBaru}>{s.sesudah} pcs</Text>
+                  </Text>
+                </View>
+                <View style={styles.minusBadge}>
+                  <Text style={styles.minusText}>-{s.jumlah}</Text>
+                </View>
+              </View>
+            ))}
           </View>
         )}
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <TouchableOpacity style={styles.primaryBtn} onPress={() => router.replace('/(app)/penjualan')} activeOpacity={0.85}>
-          <MaterialCommunityIcons name="cart-plus" size={20} color="#FFFFFF" />
+          <MaterialCommunityIcons name="plus-circle-outline" size={20} color="#FFFFFF" />
           <Text style={styles.primaryText}>Transaksi Baru</Text>
         </TouchableOpacity>
+
+        {/* [DITAMBAHKAN] Lihat Detail Transaksi (Figma hal. 20) */}
+        {trx && (
+          <TouchableOpacity
+            style={styles.outlineBtn}
+            onPress={() => router.push({ pathname: '/(app)/detail-transaksi', params: { id: trx.id } })}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="receipt-text-outline" size={20} color="#0052CC" />
+            <Text style={styles.outlineText}>Lihat Detail Transaksi</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity style={styles.secondaryBtn} onPress={() => router.replace('/(app)/beranda')} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="home-outline" size={20} color="#0052CC" />
+          <MaterialCommunityIcons name="home-outline" size={20} color="#475569" />
           <Text style={styles.secondaryText}>Kembali ke Beranda</Text>
         </TouchableOpacity>
       </View>
@@ -85,7 +129,7 @@ export default function PenjualanSuksesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
-  scrollContent: { alignItems: 'center', paddingHorizontal: 20, paddingTop: 70, paddingBottom: 200 },
+  scrollContent: { alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 270 },
   successOuter: {
     width: 120, height: 120, borderRadius: 60, backgroundColor: '#E6F9EF',
     justifyContent: 'center', alignItems: 'center', marginBottom: 24,
@@ -102,7 +146,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 24, paddingHorizontal: 20 },
   card: {
     width: '100%', backgroundColor: '#FFFFFF', borderRadius: 18, padding: 16,
-    borderWidth: 1, borderColor: '#E2E8F0',
+    borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 14,
   },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   kode: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
@@ -119,6 +163,21 @@ const styles = StyleSheet.create({
   value: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
   grandLabel: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
   grandValue: { fontSize: 19, fontWeight: '700', color: '#0052CC' },
+  stokCard: {
+    width: '100%', backgroundColor: '#F0FDF4', borderRadius: 16, padding: 14,
+    borderWidth: 1, borderColor: '#BBF7D0',
+  },
+  stokHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  stokTitle: { fontSize: 14, fontWeight: '700', color: '#15803D' },
+  stokRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF',
+    borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#DCFCE7', marginBottom: 8,
+  },
+  stokNama: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
+  stokAngka: { fontSize: 12, color: '#64748B', marginTop: 3 },
+  stokBaru: { fontWeight: '700', color: '#0052CC' },
+  minusBadge: { backgroundColor: '#FEE2E2', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+  minusText: { fontSize: 12, fontWeight: '700', color: '#B91C1C' },
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#F8FAFC',
     paddingHorizontal: 20, paddingTop: 12, gap: 10,
@@ -128,9 +187,13 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: 8,
   },
   primaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  secondaryBtn: {
-    flexDirection: 'row', backgroundColor: '#F1F5FF', paddingVertical: 14, borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#DBEAFE',
+  outlineBtn: {
+    flexDirection: 'row', backgroundColor: '#FFFFFF', paddingVertical: 14, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#0052CC',
   },
-  secondaryText: { color: '#0052CC', fontSize: 14, fontWeight: '700' },
+  outlineText: { color: '#0052CC', fontSize: 14, fontWeight: '700' },
+  secondaryBtn: {
+    flexDirection: 'row', paddingVertical: 10, alignItems: 'center', justifyContent: 'center', gap: 8,
+  },
+  secondaryText: { color: '#475569', fontSize: 13, fontWeight: '600' },
 });

@@ -37,6 +37,28 @@ export default function PenjualanScreen() {
     });
   };
 
+  // [DITAMBAHKAN] Hapus satu produk dari keranjang dengan konfirmasi (Figma hal. 18)
+  const hapusDariKeranjang = (produk) => {
+    const jumlah = keranjang[produk.id] || 0;
+    Alert.alert(
+      'Hapus Produk dari Keranjang?',
+      `${produk.nama} (${jumlah} pcs) akan dihapus dari transaksi penjualan saat ini.`,
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Hapus',
+          style: 'destructive',
+          onPress: () =>
+            setKeranjang((prev) => {
+              const salinan = { ...prev };
+              delete salinan[produk.id];
+              return salinan;
+            }),
+        },
+      ]
+    );
+  };
+
   const totalItem = Object.values(keranjang).reduce((s, n) => s + n, 0);
   const totalHarga = produkList.reduce((s, p) => s + angka(p.harga) * (keranjang[p.id] || 0), 0);
 
@@ -133,6 +155,10 @@ export default function PenjualanScreen() {
                   <TouchableOpacity style={styles.stepBtn} onPress={() => ubahJumlah(p, 1)} activeOpacity={0.7}>
                     <MaterialCommunityIcons name="plus" size={16} color="#0052CC" />
                   </TouchableOpacity>
+                  {/* [DITAMBAHKAN] tombol hapus dari keranjang */}
+                  <TouchableOpacity style={styles.hapusBtn} onPress={() => hapusDariKeranjang(p)} activeOpacity={0.7}>
+                    <MaterialCommunityIcons name="trash-can-outline" size={16} color="#DC2626" />
+                  </TouchableOpacity>
                 </View>
               )}
             </View>
@@ -205,6 +231,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   stepValue: { minWidth: 20, textAlign: 'center', fontSize: 15, fontWeight: '700', color: '#0F172A' },
+  // [DITAMBAHKAN] style tombol hapus
+  hapusBtn: {
+    width: 30, height: 30, borderRadius: 8, backgroundColor: '#FEF2F2',
+    justifyContent: 'center', alignItems: 'center',
+  },
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingTop: 12,
