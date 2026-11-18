@@ -13,6 +13,7 @@ export default function TambahProdukScreen() {
   const [harga, setHarga] = useState('');
   const [stok, setStok] = useState('');
   const [imageUri, setImageUri] = useState(null);
+  const [menyimpan, setMenyimpan] = useState(false); // [DITAMBAHKAN]
 
   const [modalKategoriVisible, setModalKategoriVisible] = useState(false);
   const daftarKategori = ['Frozen Food', 'Seafood', 'Daging', 'Dimsum & Pau', 'Sayuran & Olahan'];
@@ -79,17 +80,17 @@ export default function TambahProdukScreen() {
     ]);
   };
 
-  const handleSimpan = () => {
+  const handleSimpan = async () => { // [DIUBAH] jadi async
     if (!namaProduk || kategori === 'Pilih Kategori' || !harga || !stok) {
       Alert.alert('Perhatian', 'Mohon lengkapi seluruh field wajib yang bertanda bintang (*), termasuk kategori produk.');
       return;
     }
 
     const produkBaru = {
-      id: Date.now().toString(),
+      id: Date.now().toString(), // id sementara; id asli dari database diberikan server
       nama: namaProduk,
       kategori: kategori,
-      sku: barcode || `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
+      sku: barcode.trim() || `SKU-${Math.floor(1000 + Math.random() * 9000)}`, // [DIUBAH] tambah trim()
       harga: `Rp${parseInt(harga).toLocaleString('id-ID')}`,
       stok: `${stok} pcs`,
       temp: '-18°C',
@@ -97,13 +98,21 @@ export default function TambahProdukScreen() {
       deskripsi: `Produk ${namaProduk} kategori ${kategori} kualitas premium. Simpan beku di suhu -18°C.`,
     };
 
-    addProduct(produkBaru);
+    // [DIUBAH] Simpan ke server, pakai id dari database
+    try {
+      setMenyimpan(true);
+      const tersimpan = await addProduct(produkBaru);
 
-     // Buka layar sukses (replace agar tombol back tidak kembali ke form)
-    router.replace({
-      pathname: '/(app)/tambah-produk-sukses',
-      params: { id: produkBaru.id },
-    });
+      // Buka layar sukses (replace agar tombol back tidak kembali ke form)
+      router.replace({
+        pathname: '/(app)/tambah-produk-sukses',
+        params: { id: tersimpan.id },
+      });
+    } catch (e) {
+      Alert.alert('Gagal Menyimpan', e.message);
+    } finally {
+      setMenyimpan(false);
+    }
   };
 
   return (
@@ -160,6 +169,7 @@ export default function TambahProdukScreen() {
                 placeholderTextColor="#94A3B8"
                 value={barcode}
                 onChangeText={setBarcode}
+                maxLength={12} // [DITAMBAHKAN] kolom barcode di database maksimal 12 karakter
               />
               <TouchableOpacity style={styles.scanButton} onPress={() => alert('Membuka pemindai kamera barcode gudang')}>
                 <Text style={styles.scanButtonIcon}>❚║│█║▌</Text>
@@ -267,9 +277,15 @@ export default function TambahProdukScreen() {
       </Modal>
 
       <View style={styles.footerContainer}>
-        <TouchableOpacity style={styles.simpanButton} onPress={handleSimpan} activeOpacity={0.8}>
+        {/* [DIUBAH] tombol dikunci saat sedang menyimpan */}
+        <TouchableOpacity
+          style={[styles.simpanButton, menyimpan && { opacity: 0.6 }]}
+          onPress={handleSimpan}
+          disabled={menyimpan}
+          activeOpacity={0.8}
+        >
           <Text style={styles.simpanButtonIcon}>✓</Text>
-          <Text style={styles.simpanButtonText}>Simpan Produk</Text>
+          <Text style={styles.simpanButtonText}>{menyimpan ? 'Menyimpan...' : 'Simpan Produk'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.batalButton} onPress={() => router.back()} activeOpacity={0.7}>

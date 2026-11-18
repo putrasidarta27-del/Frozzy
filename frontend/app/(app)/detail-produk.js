@@ -37,9 +37,14 @@ export default function DetailProdukScreen() {
         {
           text: 'Hapus',
           style: 'destructive',
-          onPress: () => {
-            if (found?.id) deleteProduct(found.id);
-            router.replace('/(app)/hapus-produk-sukses');
+          // [DIUBAH] Hapus dari server dulu, baru buka layar sukses
+          onPress: async () => {
+            try {
+              if (found?.id) await deleteProduct(found.id);
+              router.replace('/(app)/hapus-produk-sukses');
+            } catch (e) {
+              Alert.alert('Gagal Menghapus', e.message);
+            }
           },
         },
       ]

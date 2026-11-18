@@ -25,6 +25,7 @@ export default function EditProdukScreen() {
   const [stok, setStok] = useState(parseInt(produk?.stok, 10) || 0);
   const [fotoBaru, setFotoBaru] = useState(null); // hanya terisi kalau foto diganti
   const [modalKategori, setModalKategori] = useState(false);
+  const [menyimpan, setMenyimpan] = useState(false); // [DITAMBAHKAN]
 
   if (!produk) {
     return (
@@ -81,7 +82,7 @@ export default function EditProdukScreen() {
 
   const ubahStok = (delta) => setStok((s) => Math.max(0, s + delta));
 
-  const handleSimpan = () => {
+  const handleSimpan = async () => { // [DIUBAH] jadi async
     if (!nama.trim() || !harga) {
       Alert.alert('Perhatian', 'Nama produk dan harga jual wajib diisi.');
       return;
@@ -96,12 +97,19 @@ export default function EditProdukScreen() {
     };
     if (fotoBaru) perubahan.image = { uri: fotoBaru };
 
-    updateProduct(produk.id, perubahan);
-
-    router.replace({
-      pathname: '/(app)/edit-produk-sukses',
-      params: { id: produk.id },
-    });
+    // [DIUBAH] Simpan perubahan ke server
+    try {
+      setMenyimpan(true);
+      await updateProduct(produk.id, perubahan);
+      router.replace({
+        pathname: '/(app)/edit-produk-sukses',
+        params: { id: produk.id },
+      });
+    } catch (e) {
+      Alert.alert('Gagal Menyimpan', e.message);
+    } finally {
+      setMenyimpan(false);
+    }
   };
 
   const stokTersedia = stok > 0;
@@ -193,6 +201,7 @@ export default function EditProdukScreen() {
             value={barcode}
             onChangeText={setBarcode}
             autoCapitalize="characters"
+            maxLength={12} // [DITAMBAHKAN] kolom barcode di database maksimal 12 karakter
             placeholder="Kode barcode / SKU"
             placeholderTextColor="#94A3B8"
           />
@@ -264,9 +273,15 @@ export default function EditProdukScreen() {
         <TouchableOpacity style={styles.cancelBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <Text style={styles.cancelText}>Batal</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSimpan} activeOpacity={0.85}>
+        {/* [DIUBAH] tombol dikunci saat sedang menyimpan */}
+        <TouchableOpacity
+          style={[styles.saveBtn, menyimpan && { opacity: 0.6 }]}
+          onPress={handleSimpan}
+          disabled={menyimpan}
+          activeOpacity={0.85}
+        >
           <MaterialCommunityIcons name="content-save-outline" size={19} color="#FFFFFF" />
-          <Text style={styles.saveText}>Simpan Produk</Text>
+          <Text style={styles.saveText}>{menyimpan ? 'Menyimpan...' : 'Simpan Produk'}</Text>
         </TouchableOpacity>
       </View>
 
