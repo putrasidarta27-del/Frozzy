@@ -114,21 +114,25 @@ router.get('/me', wajibLogin, async (req, res) => {
 // ==========================================
 // [DITAMBAHKAN] PUT /auth/profil : Ubah Nama / Email
 // ==========================================
+// ==========================================
+// [DIUBAH] PUT /auth/profil : Ubah Nama / Email
+// Tanpa transaksi database (sebelumnya transaksi tidak ditutup saat email kembar)
+// ==========================================
 router.put('/profil', wajibLogin, async (req, res) => {
-  const { nama, email } = req.body;
-  if (!nama || !email) {
-    return res.status(400).json({ pesan: 'Nama dan email wajib diisi' });
-  }
-
-  const emailBersih = email.trim().toLowerCase();
+  const namaBersih = String(req.body.nama ?? '').trim();
+  const emailBersih = String(req.body.email ?? '').trim().toLowerCase();
   const userId = req.user.sub;
 
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
+  if (!namaBersih || !emailBersih) {
+    return res.status(400).json({ pesan: 'Nama dan email wajib diisi' });
+  }
+  if (!/^\S+@\S+\.\S+$/.test(emailBersih)) {
+    return res.status(400).json({ pesan: 'Format email tidak valid' });
+  }
 
+  try {
     // Cek apakah email sudah dipakai user lain
-    const [duplikat] = await conn.query(
+    const [duplikat] = await pool.query(
       'SELECT id FROM users WHERE email = ? AND id != ?',
       [emailBersih, userId]
     );
@@ -136,29 +140,20 @@ router.put('/profil', wajibLogin, async (req, res) => {
       return res.status(409).json({ pesan: 'Email sudah digunakan oleh akun lain' });
     }
 
-    await conn.query(
-      'UPDATE users SET nama = ?, email = ? WHERE id = ?',
-      [nama.trim(), emailBersih, userId]
-    );
+    await pool.query('UPDATE users SET nama = ?, email = ? WHERE id = ?', [namaBersih, emailBersih, userId]);
 
-    await conn.commit();
-
-    // Ambil data terbaru
-    const [rows] = await conn.query(
+    const [rows] = await pool.query(
       'SELECT id, nama, email, role, dibuat_pada FROM users WHERE id = ?',
       [userId]
     );
 
-    res.json({
-      pesan: 'Profil berhasil diperbarui',
-      user: rows[0],
-    });
+    res.json({ pesan: 'Profil berhasil diperbarui', user: rows[0] });
   } catch (e) {
-    await conn.rollback();
+    if (e.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ pesan: 'Email sudah digunakan oleh akun lain' });
+    }
     console.error(e);
     res.status(500).json({ pesan: 'Gagal memperbarui profil' });
-  } finally {
-    conn.release();
   }
 });
 

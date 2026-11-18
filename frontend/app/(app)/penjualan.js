@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // [DIUBAH]
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router'; // [DIUBAH]
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProducts } from '../../context/ProductContext';
@@ -13,6 +13,25 @@ export default function PenjualanScreen() {
   const insets = useSafeAreaInsets();
   const [cari, setCari] = useState('');
   const [keranjang, setKeranjang] = useState({}); // { idProduk: jumlah }
+
+
+  // [DITAMBAHKAN] Menerima produk hasil scan barcode dari layar pemindai
+  const params = useLocalSearchParams();
+  useEffect(() => {
+    if (!params.scanBarcode || !params.scanId) return;
+    const produk = produkList.find(
+      (p) => String(p.sku).toLowerCase() === String(params.scanBarcode).toLowerCase()
+    );
+    if (!produk) return;
+    const stok = angka(produk.stok);
+    const minta = parseInt(params.scanQty, 10) || 1;
+    setKeranjang((prev) => {
+      const baru = Math.min(stok, (prev[produk.id] || 0) + minta); // tidak melebihi stok
+      if (baru <= 0) return prev;
+      return { ...prev, [produk.id]: baru };
+    });
+  }, [params.scanId]);
+
 
   const kata = cari.trim().toLowerCase();
   const daftar = produkList.filter(

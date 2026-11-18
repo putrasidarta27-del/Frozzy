@@ -62,9 +62,21 @@ export function AuthProvider({ children }) {
     router.replace('/sign-in');
   }
 
+  // [DITAMBAHKAN] Ubah nama / email lewat PUT /auth/profil
+  async function updateProfile(nama, email) {
+    const data = await apiFetch('/auth/profil', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ nama, email }),
+    });
+    setUser(data.user); // profil di layar ikut berubah
+    return data;
+  }
+
+
   return (
     <AuthContext.Provider
-      value={{ token, user, loading, signIn, signOut }}
+      value={{ token, user, loading, signIn, signOut, updateProfile }}
     >
       {children}
     </AuthContext.Provider>

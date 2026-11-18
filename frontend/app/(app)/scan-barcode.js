@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+
 import {
   View,
   Text,
@@ -6,6 +7,8 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  Alert, // [DITAMBAHKAN]
+    TextInput, // [DITAMBAHKAN]
 } from 'react-native';
 import {
   CameraView,
@@ -16,11 +19,15 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useProducts } from '../../context/ProductContext';
 import { BASE_URL } from '../../services/produkService';
 
+const angka = (teks) => parseInt(String(teks).replace(/\D/g, ''), 10) || 0; // [DITAMBAHKAN]
+
 export default function ScanBarcodeScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [hasilScan, setHasilScan] = useState(null);
   const { produkList } = useProducts();
   const [qty, setQty] = useState(1);
+    const [kodeManual, setKodeManual] = useState(''); // [DITAMBAHKAN]
+  
 
   if (!permission) {
     return (
@@ -55,6 +62,22 @@ export default function ScanBarcodeScreen() {
       )
     : null;
 
+  // [DITAMBAHKAN] Stok produk yang terbaca, untuk membatasi jumlah
+  const stokProduk = produkCocok ? angka(produkCocok.stok) : 0;
+  const habis = produkCocok ? stokProduk <= 0 : false;
+  // [DITAMBAHKAN] Cari produk dari kode yang diketik manual (barcode rusak / tidak terbaca)
+  const cariManual = () => {
+    const kode = kodeManual.trim();
+    if (!kode) {
+      Alert.alert('Perhatian', 'Ketik kode barcode terlebih dahulu.');
+      return;
+    }
+    setHasilScan({ data: kode, type: 'manual' });
+    setQty(1);
+    setKodeManual('');
+  };
+
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -81,7 +104,8 @@ export default function ScanBarcodeScreen() {
                   barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'code39', 'qr'],
                 }}
                 onBarcodeScanned={({ data, type }) => {
-                  setHasilScan({ data, type });
+                  // [DIUBAH] Kamera mengirim hasil berulang; hanya hasil pertama yang dipakai
+                  setHasilScan((lama) => lama || { data, type });
                   setQty(1);
                 }}
               />
@@ -96,7 +120,31 @@ export default function ScanBarcodeScreen() {
                 Pastikan pencahayaan cukup agar pemindai dapat membaca garis barcode dengan cepat.
               </Text>
             </View>
+
+  {/* [DITAMBAHKAN] Input manual bila barcode rusak atau tidak terbaca */}
+            <View style={styles.manualCard}>
+              <Text style={styles.manualTitle}>Barcode rusak atau tidak terbaca?</Text>
+              <Text style={styles.manualDesc}>Ketik kode barcode secara manual.</Text>
+              <View style={styles.manualRow}>
+                <TextInput
+                  style={styles.manualInput}
+                  value={kodeManual}
+                  onChangeText={setKodeManual}
+                  placeholder="Contoh: SKU-CKN01"
+                  placeholderTextColor="#94A3B8"
+                  autoCapitalize="characters"
+                  returnKeyType="search"
+                  onSubmitEditing={cariManual}
+                />
+                <TouchableOpacity style={styles.manualBtn} onPress={cariManual} activeOpacity={0.8}>
+                  <MaterialCommunityIcons name="magnify" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          
+
           </>
+        
         ) : produkCocok ? (
           /* ==================================================== */
           /* HALAMAN 14 FIGMA: PRODUK KETEMU & COCOK              */
@@ -126,7 +174,9 @@ export default function ScanBarcodeScreen() {
             <View style={styles.infoGrid}>
               <View style={styles.infoBoxItem}>
                 <Text style={styles.infoBoxLabel}>Stok Tersedia</Text>
-                <Text style={styles.infoBoxValue}>{produkCocok.stok}</Text>
+                <Text style={[styles.infoBoxValue, habis && { color: '#B91C1C' }]}>
+                  {habis ? 'Habis' : produkCocok.stok}
+                </Text>
               </View>
               <View style={styles.infoBoxItem}>
                 <Text style={styles.infoBoxLabel}>Suhu Ruang</Text>
@@ -148,7 +198,14 @@ export default function ScanBarcodeScreen() {
                 <Text style={styles.stepperValue}>{qty}</Text>
                 <TouchableOpacity
                   style={styles.stepperBtn}
-                  onPress={() => setQty(qty + 1)}
+                  onPress={() => {
+                    // [DIUBAH] Sebelumnya setQty(qty + 1) tanpa batas stok
+                    if (qty + 1 > stokProduk) {
+                      Alert.alert('Stok tidak cukup', `Stok "${produkCocok.nama}" hanya ${stokProduk} pcs.`);
+                      return;
+                    }
+                    setQty(qty + 1);
+                  }}
                   activeOpacity={0.7}
                 >
                   <MaterialCommunityIcons name="plus" size={18} color="#0F172A" />
@@ -157,18 +214,24 @@ export default function ScanBarcodeScreen() {
             </View>
 
             <TouchableOpacity
-              style={styles.primaryButton}
+              style={[styles.primaryButton, habis && { opacity: 0.5 }]}
+              disabled={habis}
               onPress={() => {
-                // Lempar ke halaman penjualan atau beri konfirmasi berhasil
-                router.push({
+                // [DIUBAH] Sebelumnya router.push tanpa penanda. Sekarang navigate + scanId
+                // supaya layar Penjualan membaca produk ini dan menambahkannya ke keranjang.
+                router.navigate({
                   pathname: '/(app)/penjualan',
-                  params: { scanBarcode: produkCocok.sku, scanQty: qty },
+                  params: {
+                    scanBarcode: produkCocok.sku,
+                    scanQty: String(qty),
+                    scanId: String(Date.now()),
+                  },
                 });
               }}
               activeOpacity={0.8}
             >
               <MaterialCommunityIcons name="cart-plus" size={18} color="#FFFFFF" />
-              <Text style={styles.primaryButtonText}>Masukkan ke Penjualan</Text>
+              <Text style={styles.primaryButtonText}>{habis ? 'Stok Habis' : 'Masukkan ke Penjualan'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -202,7 +265,11 @@ export default function ScanBarcodeScreen() {
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => {
-                router.push('/(app)/tambah-produk');
+                // [DIUBAH] Nomor barcode ikut dikirim (dipakai bila form tambah produk membacanya)
+                router.push({
+                  pathname: '/(app)/tambah-produk',
+                  params: { barcode: String(hasilScan.data) },
+                });
               }}
               activeOpacity={0.8}
             >
@@ -244,7 +311,7 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 16, paddingBottom: 40 },
   instructionText: { fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 16, lineHeight: 18 },
   cameraContainer: {
-    width: '100vw',
+    width: '100%', // [DIUBAH] sebelumnya '100vw' (satuan web, tidak valid di React Native)
     height: 380,
     borderRadius: 18,
     overflow: 'hidden',
@@ -277,6 +344,38 @@ const styles = StyleSheet.create({
     borderColor: '#DBEAFE',
   },
   tipsText: { flex: 1, fontSize: 12, color: '#1E40AF', lineHeight: 16 },
+
+  manualCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  manualTitle: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
+  manualDesc: { fontSize: 12, color: '#64748B', marginTop: 2, marginBottom: 10 },
+  manualRow: { flexDirection: 'row', gap: 10 },
+  manualInput: {
+    flex: 1,
+    height: 46,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 14,
+    fontSize: 13,
+    color: '#0F172A',
+  },
+  manualBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#0052CC',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
   resultCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
