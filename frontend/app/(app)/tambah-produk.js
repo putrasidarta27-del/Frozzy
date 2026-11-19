@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // [DIUBAH] tambah useEffect
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal, FlatList } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router'; // [DIUBAH]
 import * as ImagePicker from 'expo-image-picker';
 import { useProducts } from '../../context/ProductContext';
 
@@ -14,6 +14,17 @@ export default function TambahProdukScreen() {
   const [stok, setStok] = useState('');
   const [imageUri, setImageUri] = useState(null);
   const [menyimpan, setMenyimpan] = useState(false); // [DITAMBAHKAN]
+
+  // [DITAMBAHKAN] Menerima kode dari layar scan:
+  // - "Daftarkan Produk Baru" mengirim params.barcode
+  // - tombol scan di form ini mengirim params.kodeScan
+  const params = useLocalSearchParams();
+  useEffect(() => {
+    if (params.kodeScan) setBarcode(String(params.kodeScan).slice(0, 20));
+  }, [params.kodeScanId]);
+  useEffect(() => {
+    if (params.barcode) setBarcode(String(params.barcode).slice(0, 20));
+  }, [params.barcode]);
 
   const [modalKategoriVisible, setModalKategoriVisible] = useState(false);
   const daftarKategori = ['Frozen Food', 'Seafood', 'Daging', 'Dimsum & Pau', 'Sayuran & Olahan'];
@@ -169,9 +180,13 @@ export default function TambahProdukScreen() {
                 placeholderTextColor="#94A3B8"
                 value={barcode}
                 onChangeText={setBarcode}
-                maxLength={12} // [DITAMBAHKAN] kolom barcode di database maksimal 12 karakter
+                maxLength={20} // [DIUBAH] sebelumnya 12; kolom database sekarang varchar(20)
               />
-              <TouchableOpacity style={styles.scanButton} onPress={() => alert('Membuka pemindai kamera barcode gudang')}>
+              {/* [DIUBAH] sebelumnya alert('Membuka pemindai kamera barcode gudang') */}
+              <TouchableOpacity
+                style={styles.scanButton}
+                onPress={() => router.push({ pathname: '/(app)/scan-barcode', params: { mode: 'isi', kembaliKe: '/(app)/tambah-produk' } })}
+              >
                 <Text style={styles.scanButtonIcon}>❚║│█║▌</Text>
               </TouchableOpacity>
             </View>

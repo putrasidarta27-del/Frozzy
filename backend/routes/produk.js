@@ -119,7 +119,7 @@ router.post('/', terimaFoto, async (req, res) => {
     return batal(400, 'Nama produk, barcode, harga jual, dan stok wajib diisi dengan benar');
   }
   if (nama.length > 100) return batal(400, 'Nama produk maksimal 100 karakter');
-  if (barcode.length > 12) return batal(400, 'Barcode maksimal 12 karakter');
+  if (barcode.length > 20) return batal(400, 'Barcode maksimal 20 karakter');
 
   const kategoriId = await idKategori(req.body.kategori);
   if (!kategoriId) return batal(400, 'Kategori tidak dikenal');
@@ -175,7 +175,7 @@ router.put('/:id', terimaFoto, async (req, res) => {
     return batal(400, 'Nama produk, barcode, harga jual, dan stok harus diisi dengan benar');
   }
   if (nama.length > 100) return batal(400, 'Nama produk maksimal 100 karakter');
-  if (barcode.length > 12) return batal(400, 'Barcode maksimal 12 karakter');
+  if (barcode.length > 20) return batal(400, 'Barcode maksimal 20 karakter');
 
   let kategoriId = lama.id_kategori;
   if (b.kategori !== undefined) {

@@ -7,27 +7,44 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
-  Alert, // [DITAMBAHKAN]
-    TextInput, // [DITAMBAHKAN]
+  Alert,
+  TextInput,
 } from 'react-native';
 import {
   CameraView,
   useCameraPermissions,
 } from 'expo-camera';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router'; // [DIUBAH] tambah useLocalSearchParams
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useProducts } from '../../context/ProductContext';
 import { BASE_URL } from '../../services/produkService';
 
-const angka = (teks) => parseInt(String(teks).replace(/\D/g, ''), 10) || 0; // [DITAMBAHKAN]
+const angka = (teks) => parseInt(String(teks).replace(/\D/g, ''), 10) || 0;
 
 export default function ScanBarcodeScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [hasilScan, setHasilScan] = useState(null);
   const { produkList } = useProducts();
   const [qty, setQty] = useState(1);
-    const [kodeManual, setKodeManual] = useState(''); // [DITAMBAHKAN]
-  
+  const [kodeManual, setKodeManual] = useState('');
+
+  // [DITAMBAHKAN] Mode 'isi' = hanya mengambil kode barcode untuk form tambah/edit produk
+  const params = useLocalSearchParams();
+  const modeIsi = params.mode === 'isi';
+  const kembaliKe = params.kembaliKe ? String(params.kembaliKe) : '/(app)/tambah-produk';
+  const idProduk = params.idProduk ? String(params.idProduk) : '';
+
+  // [DITAMBAHKAN] Kirim kode ke form lalu kembali ke form
+  const pakaiKode = (kode) => {
+    router.navigate({
+      pathname: kembaliKe,
+      params: {
+        kodeScan: String(kode).trim(),
+        kodeScanId: String(Date.now()),
+        ...(idProduk ? { id: idProduk } : {}),
+      },
+    });
+  };
 
   if (!permission) {
     return (
@@ -62,21 +79,24 @@ export default function ScanBarcodeScreen() {
       )
     : null;
 
-  // [DITAMBAHKAN] Stok produk yang terbaca, untuk membatasi jumlah
   const stokProduk = produkCocok ? angka(produkCocok.stok) : 0;
   const habis = produkCocok ? stokProduk <= 0 : false;
-  // [DITAMBAHKAN] Cari produk dari kode yang diketik manual (barcode rusak / tidak terbaca)
+
   const cariManual = () => {
     const kode = kodeManual.trim();
     if (!kode) {
       Alert.alert('Perhatian', 'Ketik kode barcode terlebih dahulu.');
       return;
     }
+    // [DIUBAH] Pada mode isi, kode manual langsung dikirim ke form
+    if (modeIsi) {
+      pakaiKode(kode);
+      return;
+    }
     setHasilScan({ data: kode, type: 'manual' });
     setQty(1);
     setKodeManual('');
   };
-
 
   return (
     <View style={styles.container}>
@@ -93,7 +113,9 @@ export default function ScanBarcodeScreen() {
         {!hasilScan ? (
           <>
             <Text style={styles.instructionText}>
-              Arahkan kamera ke barcode produk (Code 128 / EAN) pada kemasan frozen food.
+              {modeIsi
+                ? 'Arahkan kamera ke barcode pada kemasan. Kodenya akan diisikan ke form produk.'
+                : 'Arahkan kamera ke barcode produk (Code 128 / EAN) pada kemasan frozen food.'}
             </Text>
 
             <View style={styles.cameraContainer}>
@@ -104,7 +126,15 @@ export default function ScanBarcodeScreen() {
                   barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'code39', 'qr'],
                 }}
                 onBarcodeScanned={({ data, type }) => {
-                  // [DIUBAH] Kamera mengirim hasil berulang; hanya hasil pertama yang dipakai
+                  // [DIUBAH] Pada mode isi, hasil pertama langsung dikirim ke form
+                  if (modeIsi) {
+                    if (!hasilScan) {
+                      setHasilScan({ data, type });
+                      pakaiKode(data);
+                    }
+                    return;
+                  }
+                  // Kamera mengirim hasil berulang; hanya hasil pertama yang dipakai
                   setHasilScan((lama) => lama || { data, type });
                   setQty(1);
                 }}
@@ -121,7 +151,7 @@ export default function ScanBarcodeScreen() {
               </Text>
             </View>
 
-  {/* [DITAMBAHKAN] Input manual bila barcode rusak atau tidak terbaca */}
+            {/* Input manual bila barcode rusak atau tidak terbaca */}
             <View style={styles.manualCard}>
               <Text style={styles.manualTitle}>Barcode rusak atau tidak terbaca?</Text>
               <Text style={styles.manualDesc}>Ketik kode barcode secara manual.</Text>
@@ -137,18 +167,13 @@ export default function ScanBarcodeScreen() {
                   onSubmitEditing={cariManual}
                 />
                 <TouchableOpacity style={styles.manualBtn} onPress={cariManual} activeOpacity={0.8}>
-                  <MaterialCommunityIcons name="magnify" size={20} color="#FFFFFF" />
+                  <MaterialCommunityIcons name={modeIsi ? 'check' : 'magnify'} size={20} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
             </View>
-          
-
           </>
-        
         ) : produkCocok ? (
-          /* ==================================================== */
-          /* HALAMAN 14 FIGMA: PRODUK KETEMU & COCOK              */
-          /* ==================================================== */
+          /* HALAMAN 14 FIGMA: PRODUK KETEMU & COCOK */
           <View style={styles.resultCard}>
             <View style={styles.badgeSuccess}>
               <MaterialCommunityIcons name="check-circle" size={14} color="#16A34A" />
@@ -199,7 +224,6 @@ export default function ScanBarcodeScreen() {
                 <TouchableOpacity
                   style={styles.stepperBtn}
                   onPress={() => {
-                    // [DIUBAH] Sebelumnya setQty(qty + 1) tanpa batas stok
                     if (qty + 1 > stokProduk) {
                       Alert.alert('Stok tidak cukup', `Stok "${produkCocok.nama}" hanya ${stokProduk} pcs.`);
                       return;
@@ -217,8 +241,6 @@ export default function ScanBarcodeScreen() {
               style={[styles.primaryButton, habis && { opacity: 0.5 }]}
               disabled={habis}
               onPress={() => {
-                // [DIUBAH] Sebelumnya router.push tanpa penanda. Sekarang navigate + scanId
-                // supaya layar Penjualan membaca produk ini dan menambahkannya ke keranjang.
                 router.navigate({
                   pathname: '/(app)/penjualan',
                   params: {
@@ -244,9 +266,7 @@ export default function ScanBarcodeScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          /* ==================================================== */
-          /* HALAMAN 15 FIGMA: PRODUK TIDAK DITEMUKAN             */
-          /* ==================================================== */
+          /* HALAMAN 15 FIGMA: PRODUK TIDAK DITEMUKAN */
           <View style={styles.resultCard}>
             <View style={styles.badgeDanger}>
               <MaterialCommunityIcons name="alert-circle" size={14} color="#DC2626" />
@@ -265,7 +285,6 @@ export default function ScanBarcodeScreen() {
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => {
-                // [DIUBAH] Nomor barcode ikut dikirim (dipakai bila form tambah produk membacanya)
                 router.push({
                   pathname: '/(app)/tambah-produk',
                   params: { barcode: String(hasilScan.data) },
@@ -311,7 +330,7 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 16, paddingBottom: 40 },
   instructionText: { fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 16, lineHeight: 18 },
   cameraContainer: {
-    width: '100%', // [DIUBAH] sebelumnya '100vw' (satuan web, tidak valid di React Native)
+    width: '100%',
     height: 380,
     borderRadius: 18,
     overflow: 'hidden',

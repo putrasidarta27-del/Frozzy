@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // [DIUBAH] tambah useEffect
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal, FlatList } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -26,6 +26,11 @@ export default function EditProdukScreen() {
   const [fotoBaru, setFotoBaru] = useState(null); // hanya terisi kalau foto diganti
   const [modalKategori, setModalKategori] = useState(false);
   const [menyimpan, setMenyimpan] = useState(false); // [DITAMBAHKAN]
+
+  // [DITAMBAHKAN] Menerima kode dari layar scan (harus di atas blok "if (!produk)")
+  useEffect(() => {
+    if (params.kodeScan) setBarcode(String(params.kodeScan).slice(0, 20));
+  }, [params.kodeScanId]);
 
   if (!produk) {
     return (
@@ -201,11 +206,14 @@ export default function EditProdukScreen() {
             value={barcode}
             onChangeText={setBarcode}
             autoCapitalize="characters"
-            maxLength={12} // [DITAMBAHKAN] kolom barcode di database maksimal 12 karakter
+            maxLength={20} // [DIUBAH] sebelumnya 12; kolom database sekarang varchar(20)
             placeholder="Kode barcode / SKU"
             placeholderTextColor="#94A3B8"
           />
-          <TouchableOpacity onPress={() => Alert.alert('Barcode', 'Pemindai barcode belum tersedia.')}>
+          {/* [DIUBAH] sebelumnya Alert 'Pemindai barcode belum tersedia.' */}
+          <TouchableOpacity
+            onPress={() => router.push({ pathname: '/(app)/scan-barcode', params: { mode: 'isi', kembaliKe: '/(app)/edit-produk', idProduk: String(produk.id) } })}
+          >
             <MaterialCommunityIcons name="barcode-scan" size={22} color="#0052CC" />
           </TouchableOpacity>
         </View>
