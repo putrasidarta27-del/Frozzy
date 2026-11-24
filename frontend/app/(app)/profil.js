@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { router } from 'expo-router';
 import BottomNav from '../../components/BottomNav';
+import NotifBell from '../../components/NotifBell';
 
 export default function ProfilScreen() {
   const { user, signOut } = useAuth();
@@ -51,10 +52,13 @@ export default function ProfilScreen() {
           </View>
           <Text style={styles.headerTitle}>Profil Saya</Text>
         </View>
-        <View style={styles.serverBadge}>
-          <View style={styles.greenDot} />
-          <Text style={styles.serverBadgeText}>Online</Text>
-        </View>
+       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+  <View style={styles.serverBadge}>
+    <View style={styles.greenDot} />
+    <Text style={styles.serverBadgeText}>Online</Text>
+  </View>
+  <NotifBell />
+</View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url'; // [DITAMBAHKAN]
 import authRoutes from './routes/auth.js';
 import produkRoutes from './routes/produk.js'; // [DITAMBAHKAN]
 import transaksiRoutes from './routes/transaksi.js'; // [DITAMBAHKAN]
+import notificationRoutes from './routes/notification.js'; // [DITAMBAHKAN]
 
 const app = express();
 
@@ -29,5 +30,6 @@ app.use('/auth', authRoutes);
 // [DITAMBAHKAN] Rute produk
 app.use('/produk', produkRoutes);
 app.use('/transaksi', transaksiRoutes); // [DITAMBAHKAN]
+app.use('/notifications', notificationRoutes); // [DITAMBAHKAN]
 
 export default app;

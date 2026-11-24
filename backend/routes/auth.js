@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db.js';
 import { wajibLogin } from '../middleware/auth.js';
+import { notifPegawaiLogin } from '../services/notifikasiService.js'; // [DITAMBAHKAN]
 
 const router = Router();
 
@@ -80,6 +81,10 @@ router.post('/login', async (req, res) => {
         algorithm: 'HS256',
       }
     );
+
+    // [DITAMBAHKAN] Beri tahu Pemilik bila yang login adalah Pegawai.
+    // Tidak di-await dan tidak melempar error, jadi login tidak ikut gagal.
+    notifPegawaiLogin(user.id);
 
     return res.json({
       token,

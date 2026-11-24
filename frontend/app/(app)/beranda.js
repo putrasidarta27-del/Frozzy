@@ -6,6 +6,7 @@ import BottomNav from '../../components/BottomNav';
 // import { daftarTransaksi, formatRupiah, hitungTotal, hitungItem } from '../../data/transaksiData';
 import { useTransaksi } from '../../context/TransaksiContext'; // [DITAMBAHKAN]
 import { useProducts } from '../../context/ProductContext'; // [DITAMBAHKAN]
+import NotifBell from '../../components/NotifBell';
 
 const formatRupiah = (angka) => `Rp${Number(angka).toLocaleString('id-ID')}`; // [DITAMBAHKAN]
 
@@ -41,10 +42,7 @@ export default function BerandaScreen() {
         </View>
 
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.notifButton} onPress={() => alert('Notifikasi ditekan')}>
-            <Text style={styles.notifIcon}>🔔</Text>
-            <View style={styles.redDot} />
-          </TouchableOpacity>
+          <NotifBell />
           <View style={styles.avatarCircle}>
             <Text style={styles.avatarInitials}>{userInitials}</Text>
           </View>

@@ -7,9 +7,23 @@ import {
 import * as SecureStore from 'expo-secure-store';
 import { apiFetch } from '../services/api';
 import { router } from 'expo-router';
+import { ambilExpoPushToken } from '../utils/notifications';
+import { daftarkanTokenPush } from '../services/notificationService';
 
 const AuthContext = createContext(null);
 const TOKEN_KEY = 'access_token';
+
+// Minta izin, ambil token push HP ini, lalu kirim ke backend.
+// Tidak pernah melempar error supaya login tidak ikut gagal.
+async function daftarkanPush(jwt) {
+  try {
+    const expoPushToken = await ambilExpoPushToken();
+    if (!expoPushToken) return;
+    await daftarkanTokenPush(jwt, expoPushToken);
+  } catch (e) {
+    console.log('Gagal mendaftarkan token push:', e?.message);
+  }
+}
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
@@ -31,6 +45,9 @@ export function AuthProvider({ children }) {
       });
       setToken(saved);
       setUser(me);
+
+      // [DITAMBAHKAN] Daftarkan token push untuk sesi yang dipulihkan
+      daftarkanPush(saved);
     } catch (e) {
       await SecureStore.deleteItemAsync(TOKEN_KEY);
       setToken(null);
@@ -50,6 +67,9 @@ export function AuthProvider({ children }) {
     await SecureStore.setItemAsync(TOKEN_KEY, data.token);
     setToken(data.token);
     setUser(data.user);
+
+    // [DITAMBAHKAN] Daftarkan token push milik akun yang baru login
+    daftarkanPush(data.token);
 
     // Pindah otomatis ke beranda setelah berhasil login
     router.replace('/(app)/beranda');
@@ -85,7 +105,3 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
-
-// [DIUBAH] Blok updateProfile kedua yang tadinya menumpuk di dalam useAuth
-// dikeluarkan dari kode aktif (tidak pernah berjalan, dan memakai setUser yang
-// tidak ada di sana). Versi yang dipakai adalah updateProfile di dalam AuthProvider.

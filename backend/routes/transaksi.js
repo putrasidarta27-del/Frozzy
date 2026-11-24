@@ -1,6 +1,7 @@
 import express from 'express';
 import { pool } from '../db.js';
 import { wajibLogin } from '../middleware/auth.js';
+import { notifStok } from '../services/notifikasiService.js'; // [DITAMBAHKAN]
 
 const router = express.Router();
 
@@ -144,6 +145,18 @@ router.post('/', async (req, res) => {
     }
 
     await conn.commit();
+
+    // [DITAMBAHKAN] Cek stok menipis/habis SETELAH transaksi tersimpan.
+    // Tidak di-await dan tidak melempar error, jadi transaksi tidak ikut gagal.
+    for (const p of produk) {
+      notifStok({
+        idProduk: p.id_produk,
+        namaProduk: p.nama_produk,
+        stokSebelum: p.stok_terakhir,
+        stokSesudah: p.stok_terakhir - gabung.get(p.id_produk),
+      });
+    }
+
     res.status(201).json(await ambilDetail(idTransaksi));
   } catch (e) {
     await conn.rollback();

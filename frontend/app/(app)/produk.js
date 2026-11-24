@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useProducts } from '../../context/ProductContext'; // Pastikan import ini ada
 import { router } from 'expo-router';
 import BottomNav from '../../components/BottomNav';
+import NotifBell from '../../components/NotifBell';
 
 export default function ProdukScreen() {
   const { user } = useAuth();
@@ -66,10 +67,7 @@ export default function ProdukScreen() {
         </View>
 
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.notifButton} onPress={() => alert('Notifikasi')}>
-            <MaterialCommunityIcons name="bell-outline" size={20} color="#334155" />
-            <View style={styles.redDot} />
-          </TouchableOpacity>
+          <NotifBell />
           <TouchableOpacity onPress={() => router.replace('/(app)/profil')}>
             <View style={styles.avatarCircle}>
               <Text style={styles.avatarInitials}>{userInitials}</Text>

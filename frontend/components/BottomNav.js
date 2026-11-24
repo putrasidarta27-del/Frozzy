@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+
 const ACTIVE_COLOR = '#0052CC';
 const INACTIVE_COLOR = '#334155';
 

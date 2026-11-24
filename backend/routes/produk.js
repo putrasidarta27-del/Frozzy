@@ -5,6 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { pool } from '../db.js';
 import { wajibLogin } from '../middleware/auth.js';
+import { notifStok } from '../services/notifikasiService.js'; // [DITAMBAHKAN]
 
 const router = express.Router();
 
@@ -208,6 +209,16 @@ router.put('/:id', terimaFoto, async (req, res) => {
     }
     await conn.commit();
     if (fotoBaru) hapusFile(lama.image_url); // foto lama sudah tidak dipakai
+
+    // [DITAMBAHKAN] Cek stok menipis/habis bila stok berubah lewat edit produk.
+    // Tidak di-await dan tidak melempar error.
+    notifStok({
+      idProduk: id,
+      namaProduk: nama,
+      stokSebelum: lama.stok_terakhir,
+      stokSesudah: stok,
+    });
+
     res.json(await ambilSatu(id));
   } catch (e) {
     await conn.rollback();
