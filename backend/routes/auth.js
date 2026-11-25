@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { randomInt } from 'node:crypto';
+import { kirimOtpEmail } from '../services/emailService.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db.js';
@@ -198,5 +200,163 @@ router.put('/kata-sandi', wajibLogin, async (req, res) => {
   }
 });
 
+
+
+// ==========================================
+// RESET PASSWORD VIA EMAIL OTP
+// ==========================================
+
+router.post('/forgot-password', async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    return res.status(400).json({ pesan: 'Format email tidak valid' });
+  }
+
+  try {
+    const [users] = await pool.query(
+      'SELECT id FROM users WHERE email = ? LIMIT 1',
+      [email]
+    );
+
+    if (!users.length) {
+      return res.status(404).json({ pesan: 'Email tidak ditemukan' });
+    }
+
+    const otp = String(randomInt(0, 1000000)).padStart(6, '0');
+    const otpHash = await bcrypt.hash(otp, 10);
+
+    await pool.query(
+      'DELETE FROM password_reset_otps WHERE email = ? AND used_at IS NULL',
+      [email]
+    );
+
+    const [result] = await pool.query(
+      `INSERT INTO password_reset_otps
+       (email, otp_hash, expires_at, attempts)
+       VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 5 MINUTE), 0)`,
+      [email, otpHash]
+    );
+
+    try {
+      await kirimOtpEmail(email, otp);
+    } catch (mailError) {
+      await pool.query(
+        'DELETE FROM password_reset_otps WHERE id = ?',
+        [result.insertId]
+      );
+      console.error('Gagal mengirim OTP:', mailError.message);
+      return res.status(500).json({ pesan: 'Email OTP gagal dikirim. Periksa konfigurasi Gmail.' });
+    }
+
+    return res.json({ pesan: 'Kode OTP berhasil dikirim ke email.' });
+  } catch (e) {
+    console.error('Forgot password:', e.message);
+    return res.status(500).json({ pesan: 'Gagal memproses permintaan OTP.' });
+  }
+});
+
+router.post('/verify-otp', async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const otp = String(req.body.otp || '').trim();
+
+  if (!email || !/^\d{6}$/.test(otp)) {
+    return res.status(400).json({ pesan: 'Email dan OTP 6 digit wajib diisi.' });
+  }
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT * FROM password_reset_otps
+       WHERE email = ? AND used_at IS NULL
+       ORDER BY id DESC LIMIT 1`,
+      [email]
+    );
+
+    if (!rows.length) {
+      return res.status(400).json({ pesan: 'OTP tidak ditemukan atau sudah digunakan.' });
+    }
+
+    const data = rows[0];
+
+    if (data.attempts >= 5 || new Date(data.expires_at) <= new Date()) {
+      return res.status(400).json({ pesan: 'OTP sudah kedaluwarsa atau batas percobaan habis.' });
+    }
+
+    const cocok = await bcrypt.compare(otp, data.otp_hash);
+
+    if (!cocok) {
+      await pool.query(
+        'UPDATE password_reset_otps SET attempts = attempts + 1 WHERE id = ?',
+        [data.id]
+      );
+      return res.status(400).json({ pesan: 'Kode OTP salah.' });
+    }
+
+    return res.json({ pesan: 'OTP berhasil diverifikasi.' });
+  } catch (e) {
+    console.error('Verify OTP:', e.message);
+    return res.status(500).json({ pesan: 'Gagal memverifikasi OTP.' });
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const otp = String(req.body.otp || '').trim();
+  const password = String(req.body.password || '');
+
+  if (!email || !/^\d{6}$/.test(otp) || !password) {
+    return res.status(400).json({ pesan: 'Data reset password belum lengkap.' });
+  }
+
+  if (password.length < 8) {
+    return res.status(400).json({ pesan: 'Password minimal 8 karakter.' });
+  }
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT * FROM password_reset_otps
+       WHERE email = ? AND used_at IS NULL
+       ORDER BY id DESC LIMIT 1`,
+      [email]
+    );
+
+    if (!rows.length) {
+      return res.status(400).json({ pesan: 'OTP tidak valid atau sudah digunakan.' });
+    }
+
+    const data = rows[0];
+
+    if (data.attempts >= 5 || new Date(data.expires_at) <= new Date()) {
+      return res.status(400).json({ pesan: 'OTP kedaluwarsa atau batas percobaan habis.' });
+    }
+
+    const cocok = await bcrypt.compare(otp, data.otp_hash);
+
+    if (!cocok) {
+      await pool.query(
+        'UPDATE password_reset_otps SET attempts = attempts + 1 WHERE id = ?',
+        [data.id]
+      );
+      return res.status(400).json({ pesan: 'Kode OTP salah.' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    await pool.query(
+      'UPDATE users SET password_hash = ? WHERE email = ?',
+      [passwordHash, email]
+    );
+
+    await pool.query(
+      'UPDATE password_reset_otps SET used_at = NOW() WHERE id = ?',
+      [data.id]
+    );
+
+    return res.json({ pesan: 'Password berhasil diperbarui.' });
+  } catch (e) {
+    console.error('Reset password:', e.message);
+    return res.status(500).json({ pesan: 'Gagal memperbarui password.' });
+  }
+});
 
 export default router;

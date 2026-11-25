@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+﻿import { router } from 'expo-router';
 import { useState } from 'react';
 import {
   View,
@@ -50,7 +50,7 @@ export default function SignInScreen() {
         <View style={styles.headerContainer}>
           <View style={styles.logoBox}>
             <View style={styles.snowflakeInner}>
-              <Text style={styles.snowflakeText}>❄</Text>
+              <Text style={styles.snowflakeText}>â„</Text>
             </View>
           </View>
 
@@ -81,7 +81,7 @@ export default function SignInScreen() {
           {/* Field Kata Sandi & Lupa Sandi */}
           <View style={styles.passwordHeaderRow}>
             <Text style={styles.label}>Kata Sandi</Text>
-            <TouchableOpacity onPress={() => Alert.alert('Informasi', 'Fitur Lupa Sandi belum masuk dalam ruang lingkup SRS.')}>
+            <TouchableOpacity onPress={() => router.push('/forgot-password')}>
               <Text style={styles.forgotText}>Lupa Sandi?</Text>
             </TouchableOpacity>
           </View>
@@ -144,7 +144,7 @@ export default function SignInScreen() {
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.buttonText}>Masuk →</Text>
+              <Text style={styles.buttonText}>Masuk â†’</Text>
             )}
           </TouchableOpacity>
         </View>

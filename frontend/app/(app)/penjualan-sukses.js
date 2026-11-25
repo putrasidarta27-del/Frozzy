@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import * as Print from 'expo-print';
 import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,6 +7,14 @@ import { useTransaksi } from '../../context/TransaksiContext';
 
 const rupiah = (n) => `Rp${Number(n).toLocaleString('id-ID')}`;
 
+const escapeHtml = (value) =>
+  String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[char]);
 export default function PenjualanSuksesScreen() {
   const params = useLocalSearchParams();
   const { transaksiList } = useTransaksi();
@@ -22,6 +31,99 @@ export default function PenjualanSuksesScreen() {
     stokBerubah = [];
   }
 
+  const downloadStrukPDF = async () => {
+    if (!trx) {
+      Alert.alert('Gagal', 'Data transaksi tidak ditemukan.');
+      return;
+    }
+
+    try {
+      const daftarProduk = (trx.items || []).map((it) => `
+        <tr>
+          <td>
+            <strong>${escapeHtml(it.nama)}</strong><br/>
+            <small>${Number(it.qty)} x ${rupiah(it.harga)}</small>
+          </td>
+          <td class="right">${rupiah(it.subtotal)}</td>
+        </tr>
+      `).join('');
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8"/>
+          <style>
+            @page { size: 80mm auto; margin: 2mm; }
+            * { box-sizing: border-box; }
+            body {
+              font-family: Arial, sans-serif;
+              color: #1e293b;
+              font-size: 12px;
+              width: 76mm;
+              margin: 0 auto;
+            }
+            header { text-align: center; margin-bottom: 18px; }
+            h1 { color: #0052CC; font-size: 27px; margin: 0 0 5px; }
+            h2 { font-size: 15px; margin: 8px 0; }
+            .muted { color: #64748b; font-size: 10px; }
+            .line { border-top: 1px dashed #94a3b8; margin: 12px 0; }
+            table { width: 100%; border-collapse: collapse; }
+            td { padding: 7px 0; vertical-align: top; }
+            .right { text-align: right; white-space: nowrap; }
+            .total { font-size: 16px; font-weight: bold; color: #0052CC; }
+            .footer { text-align: center; margin-top: 22px; }
+          </style>
+        </head>
+        <body>
+          <header>
+            <h1>FROZZY</h1>
+            <div class="muted">STRUK PEMBELANJAAN</div>
+            <h2>Terima kasih sudah berbelanja!</h2>
+          </header>
+
+          <div class="line"></div>
+          <div>No. Transaksi: ${escapeHtml(trx.id)}</div>
+          <div>Tanggal: ${escapeHtml(trx.tanggalPendek)}</div>
+          <div>Waktu: ${escapeHtml(trx.jam)} WIB</div>
+          <div>Kasir: ${escapeHtml(trx.kasir || '-')}</div>
+          <div class="line"></div>
+
+          <table>
+            ${daftarProduk}
+          </table>
+
+          <div class="line"></div>
+          <table>
+            <tr>
+              <td>Metode Pembayaran</td>
+              <td class="right">${escapeHtml(trx.metode)}</td>
+            </tr>
+            <tr>
+              <td>Total Item</td>
+              <td class="right">${Number(trx.jumlahItem)} pcs</td>
+            </tr>
+            <tr>
+              <td class="total">TOTAL</td>
+              <td class="right total">${rupiah(trx.total)}</td>
+            </tr>
+          </table>
+
+          <div class="line"></div>
+          <div class="footer">
+            <strong>FROZZY</strong><br/>
+            <span class="muted">Sampai jumpa kembali!</span>
+          </div>
+        </body>
+        </html>
+      `;
+
+      await Print.printAsync({ html });
+    } catch (error) {
+      console.error('Gagal membuat struk PDF:', error);
+      Alert.alert('Gagal Membuat PDF', error?.message || String(error));
+    }
+  };
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -88,7 +190,7 @@ export default function PenjualanSuksesScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.stokNama}>{s.nama}</Text>
                   <Text style={styles.stokAngka}>
-                    {s.sebelum} {'→'} <Text style={styles.stokBaru}>{s.sesudah} pcs</Text>
+                    {s.sebelum} {'â†’'} <Text style={styles.stokBaru}>{s.sesudah} pcs</Text>
                   </Text>
                 </View>
                 <View style={styles.minusBadge}>
@@ -101,6 +203,16 @@ export default function PenjualanSuksesScreen() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        {trx && (
+          <TouchableOpacity
+            style={styles.pdfBtn}
+            onPress={downloadStrukPDF}
+            activeOpacity={0.85}
+          >
+            <MaterialCommunityIcons name="file-pdf-box" size={21} color="#FFFFFF" />
+            <Text style={styles.primaryText}>Download Struk PDF</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={styles.primaryBtn} onPress={() => router.replace('/(app)/penjualan')} activeOpacity={0.85}>
           <MaterialCommunityIcons name="plus-circle-outline" size={20} color="#FFFFFF" />
           <Text style={styles.primaryText}>Transaksi Baru</Text>
@@ -182,7 +294,15 @@ const styles = StyleSheet.create({
     position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#F8FAFC',
     paddingHorizontal: 20, paddingTop: 12, gap: 10,
   },
-  primaryBtn: {
+  pdfBtn: {
+    flexDirection: 'row',
+    backgroundColor: '#15803D',
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },  primaryBtn: {
     flexDirection: 'row', backgroundColor: '#0052CC', paddingVertical: 15, borderRadius: 12,
     alignItems: 'center', justifyContent: 'center', gap: 8,
   },
